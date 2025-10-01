@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install pyzmq
 
-COPY ./servidor.py .
+COPY ../publisher.py .
 
-CMD ["python", "servidor.py"]
+CMD ["python", "publisher.py"]

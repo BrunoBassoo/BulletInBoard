@@ -1,8 +1,43 @@
 services:
+
+  proxy:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_proxy
+    image: cc7261:pyzmq
+    container_name: proxy
+    volumes:
+      - ./proxy.py:/app/proxy.py
+    ports:
+      - 5557:5557
+      - 5558:5558
+
+  publisher:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_publisher
+    image: cc7261:pyzmq
+    container_name: publisher
+    volumes:
+      - ./publisher.py:/app/publisher.py
+    deploy:
+      replicas: 1
+
+  subscriber:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_subscriber
+    image: cc7261:pyzmq
+    container_name: subscriber
+    volumes:
+      - ./subscriber.py:/app/subscriber.py
+    deploy:
+      replicas: 1
+  
   broker:
     build:
       context: .
-      dockerfile: Dockerfile_broker
+      dockerfile: ./DockerFiles/Dockerfile_broker
     container_name: broker
     ports:
       - 5555:5555
@@ -11,7 +46,7 @@ services:
   servidor:
     build:
       context: .
-      dockerfile: Dockerfile_servidor
+      dockerfile: ./DockerFiles/Dockerfile_servidor
     container_name: servidor
     volumes:
       - ./servidor.py:/app/servidor.py
@@ -21,7 +56,7 @@ services:
   cliente:
     build:
       context: .
-      dockerfile: Dockerfile_cliente
+      dockerfile: ./DockerFiles/Dockerfile_cliente
     container_name: cliente
     stdin_open: true
     tty: true
@@ -31,3 +66,4 @@ services:
       - ./cliente.py:/app/cliente.py
     deploy:
       replicas: 1
+

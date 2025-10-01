@@ -1,6 +1,8 @@
 import zmq
 import json
 
+PUB_PORT = 5559  # Porta para publisher
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
@@ -11,8 +13,8 @@ cont = 0
 
 while True:
     request = socket.recv_json()
-    opcao = request["opcao"]
-    dados = request["dados"]
+    opcao = request.get("opcao")
+    dados = request.get("dados")
     reply = "ERRO: função não escolhida"
 
     match opcao:
@@ -48,7 +50,34 @@ while True:
                 reply = "OK"
 
             print(f"Canais listados com sucesso!", flush=True)
-                
+
+        # FEITO
+        case "publish":
+            try:
+                # Espera dict com user, channel, message, timestamp
+                user = dados.get("user")
+                channel = dados.get("channel")
+                message = dados.get("message")
+                timestamp = dados.get("timestamp")
+
+                pub_msg = json.dumps({
+                    "user": user,
+                    "channel": channel,
+                    "message": message,
+                    "timestamp": timestamp
+                })
+
+                # Envia para o publisher
+                pub_socket = context.socket(zmq.PUB)
+                pub_socket.bind(f"tcp://*:{PUB_PORT}")
+                pub_socket.send_string(pub_msg)
+                reply = "OK: mensagem publicada"
+                print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
+                pub_socket.close()
+            except Exception as e:
+                reply = f"ERRO: {e}"
+                print(f"[S] - Falha ao publicar mensagem: {e}", flush=True)
+    
         case _ :
             reply = "ERRO: função não encontrada"
 

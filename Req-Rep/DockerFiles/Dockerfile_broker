@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install pyzmq
 
-COPY ./cliente.py .
+COPY ../broker.py .
 
-CMD ["python", "cliente.py"]
+CMD ["python", "broker.py"]
