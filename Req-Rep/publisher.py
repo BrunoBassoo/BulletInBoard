@@ -1,27 +1,28 @@
+
 import zmq
 from time import sleep
 
 context = zmq.Context()
 
 # SUB para receber do servidor
-sub_servidor = context.socket(zmq.SUB)
-sub_servidor.connect("tcp://servidor:5559")  # Porta definida no servidor
-sub_servidor.setsockopt_string(zmq.SUBSCRIBE, "")
+servidor_sub = context.socket(zmq.SUB)
+servidor_sub.connect("tcp://servidor:5558")  # Porta definida no servidor
+servidor_sub.setsockopt_string(zmq.SUBSCRIBE, "")  # Assina todos os tópicos
 
 # PUB para enviar ao proxy
-pub_proxy = context.socket(zmq.PUB)
-pub_proxy.connect("tcp://proxy:5557")  # Proxy XSUB
+proxy_pub = context.socket(zmq.PUB)
+proxy_pub.connect("tcp://proxy:5557")  # Proxy XSUB
 
 while True:
     try:
-        mensagem = sub_servidor.recv_string()
+        mensagem = servidor_sub.recv_string()
         print(f"[PUBLISHER] Recebido do servidor: {mensagem}", flush=True)
-        pub_proxy.send_string(mensagem)
+        proxy_pub.send_string(mensagem)
         print(f"[PUBLISHER] Enviado ao proxy: {mensagem}", flush=True)
     except Exception as e:
         print(f"[PUBLISHER] Erro: {e}", flush=True)
     sleep(0.5)
 
-pub_proxy.close()
-sub_servidor.close()
+proxy_pub.close()
+servidor_sub.close()
 context.close()

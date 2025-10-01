@@ -5,7 +5,7 @@ PUB_PORT = 5559  # Porta para publisher
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
-socket.connect("tcp://broker:5556")
+socket.connect("tcp://broker:5557")
 
 usuarios = dict()
 canais = dict()
@@ -99,11 +99,11 @@ while True:
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
                 pub_socket.send_string(pub_msg)
                 reply = "OK: mensagem publicada"
-                print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
+                print(f"[P] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
             except Exception as e:
                 reply = f"ERRO: {e}"
-                print(f"[S] - Falha ao publicar mensagem: {e}", flush=True)
+                print(f"[P] - Falha ao publicar mensagem: {e}", flush=True)
     
         case _ :
             reply = "ERRO: função não encontrada"
