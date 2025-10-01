@@ -11,7 +11,8 @@ while True:
 
         # FEITO
         case "login":
-            user = input("Entre com o usuario: ")
+        print("------ Login ------")
+            user = input("Entre com o seu usuário: ")
             time = datetime.now().timestamp()
 
             request = {
@@ -29,7 +30,7 @@ while True:
 
         # FEITO
         case "listar":
-            
+            print("------ Listar usuários ------")
             request = {
                 "opcao": "listar",
                 "dados": ""
@@ -43,6 +44,7 @@ while True:
 
         # FEITO
         case "cadastrarCanal":
+            print("------ Cadastrar canal ------")
             canal = input("Entre com o canal: ")
             time = datetime.now().timestamp()
 
@@ -61,7 +63,7 @@ while True:
 
         # FEITO
         case "listarCanal":
-            
+            print("------ Listar canais ------")
             request = {
                 "opcao": "listarCanal",
                 "dados": ""
@@ -75,7 +77,8 @@ while True:
         
         # FEITO
         case "publish":
-            nome_do_usuário = input("Entre com o nome do usuário: ")
+            print("------ Publicar canal ------")
+            nome_do_usuário = input("Entre com o seu usuário: ")
             nome_do_canal = input("Entre com o nome do canal: ")
             mensagem = input("Entre com a mensagem a ser publicada: ")
             timestamp = datetime.now().timestamp()
@@ -86,6 +89,33 @@ while True:
                 "dados": {
                     "user": nome_do_usuário,
                     "channel": nome_do_canal,
+                    "message": mensagem,
+                    "timestamp": timestamp
+                }
+                
+            }
+
+            socket.send_json(request)
+            reply = socket.recv_string()
+
+            if reply.split(":")[0] == "ERRO":
+                print(reply, flush=True)
+        
+        # EM ANDAMENTO
+        case "message":
+        
+            print("------ enviando mensagem privada ------")
+            nome_do_usuário = input("Entre com o seu usuário: ")
+            nome_do_receptor = input("Entre com o nome do canal: ")
+            mensagem = input("Entre com a mensagem a ser enviada: ")
+            timestamp = datetime.now().timestamp()
+
+
+            request = {
+                "opcao": "message",
+                "dados": {
+                    "user": nome_do_usuário,
+                    "receptor": nome_do_receptor,
                     "message": mensagem,
                     "timestamp": timestamp
                 }

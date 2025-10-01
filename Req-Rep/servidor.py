@@ -77,6 +77,33 @@ while True:
             except Exception as e:
                 reply = f"ERRO: {e}"
                 print(f"[S] - Falha ao publicar mensagem: {e}", flush=True)
+
+        # FEITO
+        case "message":
+            try:
+                # Espera dict com user, receptor, message, timestamp
+                user = dados.get("user")
+                receptor = dados.get("receptor")
+                message = dados.get("message")
+                timestamp = dados.get("timestamp")
+
+                pub_msg = json.dumps({
+                    "user": user,
+                    "receptor": receptor,
+                    "message": message,
+                    "timestamp": timestamp
+                })
+
+                # Envia para o publisher
+                pub_socket = context.socket(zmq.PUB)
+                pub_socket.bind(f"tcp://*:{PUB_PORT}")
+                pub_socket.send_string(pub_msg)
+                reply = "OK: mensagem publicada"
+                print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
+                pub_socket.close()
+            except Exception as e:
+                reply = f"ERRO: {e}"
+                print(f"[S] - Falha ao publicar mensagem: {e}", flush=True)
     
         case _ :
             reply = "ERRO: função não encontrada"
