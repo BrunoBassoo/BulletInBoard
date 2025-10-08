@@ -5,7 +5,7 @@ PUB_PORT = 5559  # Porta para publisher
 
 context = zmq.Context()
 socket = context.socket(zmq.REP)
-socket.connect("tcp://broker:5557")
+socket.connect("tcp://broker:5556")
 
 usuarios = dict()
 canais = dict()
@@ -16,7 +16,7 @@ while True:
     opcao = request.get("opcao")
     dados = request.get("dados")
     reply = "ERRO: função não escolhida"
-
+    print(dados)
     match opcao:
 
         # FEITO
