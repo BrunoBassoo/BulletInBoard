@@ -1,9 +1,21 @@
 import threading
+import zmq
+import msgpack
+import time
+
 # Lista de endereços dos outros servidores (exemplo, ajuste conforme sua rede)
 OUTROS_SERVIDORES = [
     "tcp://servidor2:5556",
     "tcp://servidor3:5556"
 ]
+
+# Função para salvar mensagens no arquivo de log
+def salvar_log(mensagem):
+    try:
+        with open("log.txt", "a", encoding="utf-8") as f:
+            f.write(f"{mensagem}\n")
+    except Exception as e:
+        print(f"Erro ao salvar no log: {e}", flush=True)
 
 # Função para replicar mensagem para outros servidores
 def replicar_para_outros_servidores(mensagem, lista_enderecos):
@@ -19,9 +31,6 @@ def replicar_para_outros_servidores(mensagem, lista_enderecos):
             print(f"Erro ao replicar para {endereco}: {e}")
     for endereco in lista_enderecos:
         threading.Thread(target=enviar, args=(endereco,)).start()
-import zmq
-import msgpack
-import time
 
 # Classe do relógio lógico
 class RelogioLogico:
@@ -44,6 +53,11 @@ context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect("tcp://broker:5556")
 
+# Criar socket PUB uma única vez e reutilizar
+pub_socket = context.socket(zmq.PUB)
+pub_socket.bind(f"tcp://*:{PUB_PORT}")
+print(f"[S] - Socket PUB criado e bind na porta {PUB_PORT}", flush=True)
+
 usuarios = dict()
 canais = dict()
 cont = 0
@@ -54,6 +68,10 @@ while True:
     request = msgpack.unpackb(request_data, raw=False)
     opcao = request.get("opcao")
     dados = request.get("dados")
+    
+    # Salva a mensagem recebida no log
+    salvar_log(f"[{time.time()}] Opção: {opcao} | Dados: {dados}")
+    
     # Atualiza relógio lógico ao receber
     if dados and "clock" in dados:
         relogio.update(dados["clock"])
@@ -122,8 +140,7 @@ while True:
                     "timestamp": timestamp,
                     "clock": relogio.get()
                 }
-                pub_socket = context.socket(zmq.PUB)
-                pub_socket.bind(f"tcp://*:{PUB_PORT}")
+                # Usar o socket PUB já criado
                 pub_socket.send(msgpack.packb(pub_msg))
                 reply = {
                     "msg": f"Mensagem publicada para o canal: {channel}",
@@ -131,7 +148,6 @@ while True:
                     "timestamp": time.time()
                 }
                 print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
-                pub_socket.close()
                 # Replicar para outros servidores
                 replicar_para_outros_servidores({"opcao": "publish", "dados": dados}, OUTROS_SERVIDORES)
             except Exception as e:
@@ -156,8 +172,7 @@ while True:
                     "timestamp": timestamp,
                     "clock": relogio.get()
                 }
-                pub_socket = context.socket(zmq.PUB)
-                pub_socket.bind(f"tcp://*:{PUB_PORT}")
+                # Usar o socket PUB já criado
                 pub_socket.send(msgpack.packb(pub_msg))
                 reply = {
                     "msg": f"Mensagem privada enviada para o usuário: {receptor}",
@@ -165,7 +180,6 @@ while True:
                     "timestamp": time.time()
                 }
                 print(f"[P] - Mensagem publicada para publisher: {pub_msg}", flush=True)
-                pub_socket.close()
                 # Replicar para outros servidores
                 replicar_para_outros_servidores({"opcao": "message", "dados": dados}, OUTROS_SERVIDORES)
             except Exception as e:
