@@ -3,6 +3,21 @@ from datetime import datetime
 import sys
 import msgpack
 
+# Classe do relógio lógico
+class RelogioLogico:
+    def __init__(self):
+        self.clock = 0
+    def tick(self):
+        self.clock += 1
+        return self.clock
+    def update(self, clock_recebido):
+        self.clock = max(self.clock, clock_recebido)
+        return self.clock
+    def get(self):
+        return self.clock
+
+relogio = RelogioLogico()
+
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
 socket.connect("tcp://broker:5555")
@@ -37,14 +52,16 @@ while True:
                 "opcao": "login",
                 "dados": {
                     "user": user,
-                    "time": time
+                    "time": time,
+                    "clock": relogio.tick()
                 }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            # Atualiza relógio lógico ao receber
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
 
             
@@ -54,13 +71,15 @@ while True:
             print("\n------ Listar usuários ------")
             request = {
                 "opcao": "listar",
-                "dados": ""
+                "dados": {
+                    "clock": relogio.tick()
+                }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
             
             
@@ -75,14 +94,15 @@ while True:
                 "opcao": "cadastrarCanal",
                 "dados": {
                     "canal": canal,
-                    "time": time
+                    "time": time,
+                    "clock": relogio.tick()
                 }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
 
             
@@ -92,13 +112,15 @@ while True:
             print("\n------ Listar canais ------")
             request = {
                 "opcao": "listarCanal",
-                "dados": ""
+                "dados": {
+                    "clock": relogio.tick()
+                }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
         
             
@@ -117,14 +139,15 @@ while True:
                     "user": nome_do_usuário,
                     "channel": nome_do_canal,
                     "message": mensagem,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "clock": relogio.tick()
                 }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
             
             
@@ -143,13 +166,14 @@ while True:
                     "user": nome_do_usuário,
                     "receptor": nome_do_receptor,
                     "message": mensagem,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "clock": relogio.tick()
                 }
             }
-
-            # Envia usando MessagePack
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
+            if "clock" in reply.get("dados", {}):
+                relogio.update(reply["dados"]["clock"])
             print(f"Resposta: {reply}")
     

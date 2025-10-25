@@ -47,11 +47,13 @@ services:
     build:
       context: .
       dockerfile: ./DockerFiles/Dockerfile_servidor
-    container_name: servidor
     volumes:
       - ./servidor.py:/app/servidor.py
     depends_on:
       - broker
+    deploy:
+      replicas: 3
+    
 
   cliente:
     build:
