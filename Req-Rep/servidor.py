@@ -1,5 +1,6 @@
 import zmq
 import json
+import msgpack
 
 PUB_PORT = 5559  # Porta para publisher
 
@@ -12,7 +13,9 @@ canais = dict()
 cont = 0
 
 while True:
-    request = socket.recv_json()
+    # Recebe mensagem serializada com MessagePack
+    request_data = socket.recv()
+    request = msgpack.unpackb(request_data, raw=False)
     opcao = request.get("opcao")
     dados = request.get("dados")
 
@@ -59,17 +62,17 @@ while True:
                 message = dados.get("message")
                 timestamp = dados.get("timestamp")
 
-                pub_msg = json.dumps({
+                pub_msg = {
                     "user": user,
                     "channel": channel,
                     "message": message,
                     "timestamp": timestamp
-                })
+                }
 
-                # Envia para o publisher
+                # Envia para o publisher usando MessagePack
                 pub_socket = context.socket(zmq.PUB)
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
-                pub_socket.send_string(pub_msg)
+                pub_socket.send(msgpack.packb(pub_msg))
                 reply = f"Mensagem publicada para o canal: {channel}"
                 print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
@@ -86,17 +89,17 @@ while True:
                 message = dados.get("message")
                 timestamp = dados.get("timestamp")
 
-                pub_msg = json.dumps({
+                pub_msg = {
                     "user": user,
                     "receptor": receptor,
                     "message": message,
                     "timestamp": timestamp
-                })
+                }
 
-                # Envia para o publisher
+                # Envia para o publisher usando MessagePack
                 pub_socket = context.socket(zmq.PUB)
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
-                pub_socket.send_string(pub_msg)
+                pub_socket.send(msgpack.packb(pub_msg))
                 reply = "Mensagem privada enviada para o usuário: {receptor}"
                 print(f"[P] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
@@ -107,4 +110,5 @@ while True:
         case _ :
             reply = "ERRO: função não encontrada"
 
-    socket.send_string(reply)
+    # Envia resposta usando MessagePack
+    socket.send(msgpack.packb(reply))

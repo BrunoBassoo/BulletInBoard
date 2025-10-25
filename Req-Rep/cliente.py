@@ -1,6 +1,7 @@
 import zmq
 from datetime import datetime
 import sys
+import msgpack
 
 context = zmq.Context()
 socket = context.socket(zmq.REQ)
@@ -40,8 +41,10 @@ while True:
                 }
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
 
             
@@ -54,8 +57,10 @@ while True:
                 "dados": ""
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
             
             
@@ -74,8 +79,10 @@ while True:
                 }
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
 
             
@@ -88,8 +95,10 @@ while True:
                 "dados": ""
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
         
             
@@ -112,8 +121,10 @@ while True:
                 }
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
             
             
@@ -136,7 +147,9 @@ while True:
                 }
             }
 
-            socket.send_json(request)
-            reply = socket.recv_string()
+            # Envia usando MessagePack
+            socket.send(msgpack.packb(request))
+            reply_data = socket.recv()
+            reply = msgpack.unpackb(reply_data, raw=False)
             print(f"Resposta: {reply}")
     

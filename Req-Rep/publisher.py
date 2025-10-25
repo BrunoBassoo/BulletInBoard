@@ -1,6 +1,7 @@
 
 import zmq
 from time import sleep
+import msgpack
 
 context = zmq.Context()
 
@@ -15,9 +16,13 @@ proxy_pub.connect("tcp://proxy:5557")  # Proxy XSUB
 
 while True:
     try:
-        mensagem = servidor_sub.recv_string()
+        # Recebe mensagem serializada com MessagePack
+        mensagem_data = servidor_sub.recv()
+        mensagem = msgpack.unpackb(mensagem_data, raw=False)
         print(f"[PUBLISHER] Recebido do servidor: {mensagem}", flush=True)
-        proxy_pub.send_string(mensagem)
+        
+        # Envia mensagem serializada com MessagePack
+        proxy_pub.send(msgpack.packb(mensagem))
         print(f"[PUBLISHER] Enviado ao proxy: {mensagem}", flush=True)
     except Exception as e:
         print(f"[PUBLISHER] Erro: {e}", flush=True)
