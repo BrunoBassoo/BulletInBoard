@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # Servidor de referência
+  reference_server:
+    build: .
+    container_name: reference_server
+    command: python reference_server.py
+    ports:
+      - "5555:5555"
+    networks:
+      - distributed_network
+
+  # Servidores (3 réplicas)
+  server1:
+    build: .
+    container_name: server1
+    command: python server.py server1
+    ports:
+      - "5561:5561"
+      - "5564:5564"
+      - "5556:5556"
+      - "5557:5557"
+    depends_on:
+      - reference_server
+    networks:
+      - distributed_network
+
+  server2:
+    build: .
+    container_name: server2
+    command: python server.py server2
+    ports:
+      - "5562:5562"
+      - "5565:5565"
+      - "5556:5556"
+      - "5557:5557"
+    depends_on:
+      - reference_server
+    networks:
+      - distributed_network
+
+  server3:
+    build: .
+    container_name: server3
+    command: python server.py server3
+    ports:
+      - "5563:5563"
+      - "5566:5566"
+      - "5556:5556"
+      - "5557:5557"
+    depends_on:
+      - reference_server
+    networks:
+      - distributed_network
+
+  # Broker
+  broker:
+    build: .
+    container_name: broker
+    command: python broker.py
+    ports:
+      - "5559:5559"
+    depends_on:
+      - server1
+      - server2
+      - server3
+    networks:
+      - distributed_network
+
+  # Proxy
+  proxy:
+    build: .
+    container_name: proxy
+    command: python proxy.py
+    ports:
+      - "5558:5558"
+    depends_on:
+      - server1
+      - server2
+      - server3
+    networks:
+      - distributed_network
+
+  # Cliente
+  client:
+    build: .
+    container_name: client
+    command: python client.py cliente1 interactive
+    depends_on:
+      - broker
+      - proxy
+    networks:
+      - distributed_network
+
+  # Bots (2 réplicas)
+  bot1:
+    build: .
+    container_name: bot1
+    command: python bot.py bot1 120
+    depends_on:
+      - broker
+      - proxy
+    networks:
+      - distributed_network
+
+  bot2:
+    build: .
+    container_name: bot2
+    command: python bot.py bot2 120
+    depends_on:
+      - broker
+      - proxy
+    networks:
+      - distributed_network
+
+networks:
+  distributed_network:
+    driver: bridge
