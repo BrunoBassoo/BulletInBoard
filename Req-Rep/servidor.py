@@ -100,7 +100,7 @@ while True:
                 pub_socket = context.socket(zmq.PUB)
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
                 pub_socket.send(msgpack.packb(pub_msg))
-                reply = "Mensagem privada enviada para o usuário: {receptor}"
+                reply = f"Mensagem privada enviada para o usuário: {receptor}"
                 print(f"[P] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
             except Exception as e:
