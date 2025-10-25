@@ -15,8 +15,7 @@ while True:
     request = socket.recv_json()
     opcao = request.get("opcao")
     dados = request.get("dados")
-    reply = "ERRO: função não escolhida"
-    print(dados)
+
     match opcao:
 
         # FEITO
@@ -30,8 +29,8 @@ while True:
         case "listar":
 
             for i in usuarios:
-                print(f"Usuario {i}: {usuarios[i].get("user")}\n")
-                reply = "OK"
+                print(f"Usuario {i}: {usuarios[i].get("user")} | time: {usuarios[i].get("time")}\n")
+                reply = "usuarios listados com sucesso"
 
             print(f"Usuarios listados com sucesso!", flush=True)
         
@@ -39,7 +38,7 @@ while True:
         case "cadastrarCanal":
             canais[cont] = dados
             cont += 1
-            reply = "OK"
+            reply = "cadastro de canal OK"
             print(f"[S] - Cadastro do canal {dados.get("user")} feito!",flush=True)
 
         # FEITO
@@ -47,7 +46,7 @@ while True:
 
             for i in canais:
                 print(f"Canal {i}: {canais[i].get("canal")}\n")
-                reply = "OK"
+                reply = "lista de canais OK"
 
             print(f"Canais listados com sucesso!", flush=True)
 
@@ -71,7 +70,7 @@ while True:
                 pub_socket = context.socket(zmq.PUB)
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
                 pub_socket.send_string(pub_msg)
-                reply = "OK: mensagem publicada"
+                reply = f"Mensagem publicada para o canal: {channel}"
                 print(f"[S] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
             except Exception as e:
@@ -98,7 +97,7 @@ while True:
                 pub_socket = context.socket(zmq.PUB)
                 pub_socket.bind(f"tcp://*:{PUB_PORT}")
                 pub_socket.send_string(pub_msg)
-                reply = "OK: mensagem publicada"
+                reply = "Mensagem privada enviada para o usuário: {receptor}"
                 print(f"[P] - Mensagem publicada para publisher: {pub_msg}", flush=True)
                 pub_socket.close()
             except Exception as e:
