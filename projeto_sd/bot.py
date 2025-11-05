@@ -54,15 +54,15 @@ class Bot:
         self.sub_socket.setsockopt_string(zmq.SUBSCRIBE, topico)
         print(f"[{self.nome}] Inscrito no tópico: {topico}", flush=True)
     
-    def enviar_request(self, service, data):
+    def enviar_request(self, opcao, dados):
         """Envia requisição e aguarda resposta"""
         try:
             # Incrementa relógio antes de enviar
-            data["clock"] = self.relogio.tick()
+            dados["clock"] = self.relogio.tick()
             
             request = {
-                "service": service,
-                "data": data
+                "opcao": opcao,
+                "dados": dados
             }
             
             self.socket.send(msgpack.packb(request))
@@ -70,8 +70,8 @@ class Bot:
             reply = msgpack.unpackb(reply_data, raw=False)
             
             # Atualiza relógio ao receber
-            if "data" in reply and "clock" in reply["data"]:
-                self.relogio.update(reply["data"]["clock"])
+            if "clock" in reply:
+                self.relogio.update(reply["clock"])
             
             return reply
         except Exception as e:
@@ -80,73 +80,71 @@ class Bot:
     
     def fazer_login(self):
         """Faz login no sistema"""
-        data = {
+        dados = {
             "user": self.nome,
-            "timestamp": time.time()
+            "time": time.time()
         }
         
-        reply = self.enviar_request("login", data)
-        if reply and reply.get("data", {}).get("status") == "OK":
+        reply = self.enviar_request("login", dados)
+        if reply:
             # Inscreve no tópico do próprio nome para receber mensagens privadas
             self.inscrever_topico(self.nome)
             print(f"[{self.nome}] Login realizado com sucesso!", flush=True)
             return True
         else:
-            print(f"[{self.nome}] Erro no login: {reply}", flush=True)
+            print(f"[{self.nome}] Erro no login", flush=True)
             return False
     
     def cadastrar_canal(self, canal):
         """Cadastra um novo canal"""
-        data = {
+        dados = {
             "canal": canal,
-            "timestamp": time.time()
+            "time": time.time()
         }
         
-        reply = self.enviar_request("cadastrarCanal", data)
-        if reply and reply.get("data", {}).get("status") == "OK":
+        reply = self.enviar_request("cadastrarCanal", dados)
+        if reply:
             print(f"[{self.nome}] Canal '{canal}' cadastrado!", flush=True)
             # Inscreve no canal para receber mensagens
             self.inscrever_topico(canal)
             self.canais_inscritos.append(canal)
             return True
         else:
-            print(f"[{self.nome}] Erro ao cadastrar canal: {reply}", flush=True)
+            print(f"[{self.nome}] Erro ao cadastrar canal", flush=True)
             return False
     
     def publicar_mensagem(self, canal, mensagem):
         """Publica mensagem em um canal"""
-        data = {
+        dados = {
             "user": self.nome,
             "channel": canal,
             "message": mensagem,
             "timestamp": time.time()
         }
         
-        reply = self.enviar_request("publish", data)
-        if reply and reply.get("data", {}).get("status") == "OK":
+        reply = self.enviar_request("publish", dados)
+        if reply:
             print(f"[{self.nome}] Publicado em '{canal}': {mensagem}", flush=True)
             return True
         else:
-            error_msg = reply.get("data", {}).get("message", "Erro desconhecido") if reply else "Sem resposta"
-            print(f"[{self.nome}] Erro ao publicar: {error_msg}", flush=True)
+            print(f"[{self.nome}] Erro ao publicar", flush=True)
             return False
     
     def enviar_mensagem_privada(self, receptor, mensagem):
         """Envia mensagem privada para um usuário"""
-        data = {
-            "src": self.nome,
-            "dst": receptor,
+        dados = {
+            "user": self.nome,
+            "receptor": receptor,
             "message": mensagem,
             "timestamp": time.time()
         }
         
-        reply = self.enviar_request("message", data)
-        if reply and reply.get("data", {}).get("status") == "OK":
+        reply = self.enviar_request("message", dados)
+        if reply:
             print(f"[{self.nome}] Mensagem privada enviada para '{receptor}'", flush=True)
             return True
         else:
-            error_msg = reply.get("data", {}).get("message", "Erro desconhecido") if reply else "Sem resposta"
-            print(f"[{self.nome}] Erro ao enviar privada: {error_msg}", flush=True)
+            print(f"[{self.nome}] Erro ao enviar privada", flush=True)
             return False
     
     def receber_mensagens(self):
@@ -169,10 +167,10 @@ class Bot:
                     # Mensagem de canal
                     if mensagem.get("user") != self.nome:  # Não mostra próprias mensagens
                         print(f"\n[{self.nome}] [{mensagem['channel']}] {mensagem['user']}: {mensagem['message']}", flush=True)
-                elif "dst" in mensagem:
+                elif "receptor" in mensagem:
                     # Mensagem privada
-                    if mensagem["dst"] == self.nome:
-                        print(f"\n[{self.nome}] Mensagem privada de {mensagem['src']}: {mensagem['message']}", flush=True)
+                    if mensagem["receptor"] == self.nome:
+                        print(f"\n[{self.nome}] Mensagem privada de {mensagem['user']}: {mensagem['message']}", flush=True)
                 elif "coordinator" in mensagem.get("data", {}):
                     # Anúncio de novo coordenador
                     print(f"\n[{self.nome}] Novo coordenador: {mensagem['data']['coordinator']}", flush=True)

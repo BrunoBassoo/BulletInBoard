@@ -338,18 +338,18 @@ class Servidor:
                 # Recebe mensagem serializada com MessagePack
                 request_data = self.socket.recv()
                 request = msgpack.unpackb(request_data, raw=False)
-                service = request.get("service")
-                data = request.get("data")
+                opcao = request.get("opcao")
+                dados = request.get("dados")
                 
                 # Salva a mensagem recebida no log
-                salvar_log(f"[{time.time()}] Service: {service} | Data: {data}")
+                salvar_log(f"[{time.time()}] Opcao: {opcao} | Dados: {dados}")
                 
                 # Atualiza relógio lógico ao receber
-                if data and "clock" in data:
-                    self.relogio.update(data["clock"])
+                if dados and "clock" in dados:
+                    self.relogio.update(dados["clock"])
                 
-                # Processa serviço
-                reply = self.processar_servico(service, data)
+                # Processa opção
+                reply = self.processar_opcao(opcao, dados)
                 
                 # Envia resposta usando MessagePack
                 self.socket.send(msgpack.packb(reply))
@@ -379,183 +379,127 @@ class Servidor:
                 return True
         return False
     
-    def processar_servico(self, service, data):
-        """Processa um serviço de requisição"""
-        if service == "login":
-            self.usuarios[self.cont] = data
+    def processar_opcao(self, opcao, dados):
+        """Processa uma opção de requisição"""
+        if opcao == "login":
+            self.usuarios[self.cont] = dados
             self.cont += 1
             reply = {
-                "service": "login",
-                "data": {
-                    "status": "OK",
-                    "clock": self.relogio.tick(),
-                    "timestamp": time.time()
-                }
+                "msg": "OK",
+                "clock": self.relogio.tick(),
+                "timestamp": time.time()
             }
-            print(f"[{self.nome}] Login do {data.get('user')} feito!", flush=True)
+            print(f"[{self.nome}] Login do {dados.get('user')} feito!", flush=True)
             
-        elif service == "listar":
-            usuarios_list = [u.get('user') for u in self.usuarios.values()]
+        elif opcao == "listar":
+            for i in self.usuarios:
+                print(f"Usuario {i}: {self.usuarios[i].get('user')} | time: {self.usuarios[i].get('time')}")
             reply = {
-                "service": "listar",
-                "data": {
-                    "status": "OK",
-                    "users": usuarios_list,
-                    "clock": self.relogio.tick(),
-                    "timestamp": time.time()
-                }
+                "msg": "usuarios listados com sucesso",
+                "clock": self.relogio.tick(),
+                "timestamp": time.time()
             }
-            print(f"[{self.nome}] Usuarios listados: {usuarios_list}", flush=True)
+            print(f"[{self.nome}] Usuarios listados com sucesso!", flush=True)
             
-        elif service == "cadastrarCanal":
-            self.canais[self.cont] = data
+        elif opcao == "cadastrarCanal":
+            self.canais[self.cont] = dados
             self.cont += 1
             reply = {
-                "service": "cadastrarCanal",
-                "data": {
-                    "status": "OK",
-                    "clock": self.relogio.tick(),
-                    "timestamp": time.time()
-                }
+                "msg": "cadastro de canal OK",
+                "clock": self.relogio.tick(),
+                "timestamp": time.time()
             }
-            print(f"[{self.nome}] Cadastro do canal {data.get('canal')} feito!", flush=True)
+            print(f"[{self.nome}] Cadastro do canal {dados.get('canal')} feito!", flush=True)
             
-        elif service == "listarCanal":
-            canais_list = [c.get('canal') for c in self.canais.values()]
+        elif opcao == "listarCanal":
+            for i in self.canais:
+                print(f"Canal {i}: {self.canais[i].get('canal')}")
             reply = {
-                "service": "listarCanal",
-                "data": {
-                    "status": "OK",
-                    "channels": canais_list,
-                    "clock": self.relogio.tick(),
-                    "timestamp": time.time()
-                }
+                "msg": "lista de canais OK",
+                "clock": self.relogio.tick(),
+                "timestamp": time.time()
             }
-            print(f"[{self.nome}] Canais listados: {canais_list}", flush=True)
+            print(f"[{self.nome}] Canais listados com sucesso!", flush=True)
             
-        elif service == "publish":
+        elif opcao == "publish":
             try:
-                user = data.get("user")
-                channel = data.get("channel")
-                message = data.get("message")
-                timestamp = data.get("timestamp")
+                user = dados.get("user")
+                channel = dados.get("channel")
+                message = dados.get("message")
+                timestamp = dados.get("timestamp")
                 
-                # Verifica se o canal existe
-                if not self.canal_existe(channel):
-                    reply = {
-                        "service": "publish",
-                        "data": {
-                            "status": "erro",
-                            "message": f"Canal '{channel}' não existe",
-                            "clock": self.relogio.tick(),
-                            "timestamp": time.time()
-                        }
-                    }
-                    print(f"[{self.nome}] Erro: Canal '{channel}' não existe", flush=True)
-                else:
-                    # Publica no tópico do canal
-                    topic = channel.encode('utf-8')
-                    pub_msg = {
-                        "user": user,
-                        "channel": channel,
-                        "message": message,
-                        "timestamp": timestamp,
-                        "clock": self.relogio.get()
-                    }
-                    # Envia com tópico
-                    self.pub_socket.send_multipart([topic, msgpack.packb(pub_msg)])
-                    
-                    # Salva no log
-                    salvar_log(f"[PUBLISH] Canal: {channel} | User: {user} | Msg: {message}")
-                    
-                    reply = {
-                        "service": "publish",
-                        "data": {
-                            "status": "OK",
-                            "clock": self.relogio.tick(),
-                            "timestamp": time.time()
-                        }
-                    }
-                    print(f"[{self.nome}] Mensagem publicada no canal '{channel}': {user}: {message}", flush=True)
+                # Publica no tópico do canal
+                topic = channel.encode('utf-8')
+                pub_msg = {
+                    "user": user,
+                    "channel": channel,
+                    "message": message,
+                    "timestamp": timestamp,
+                    "clock": self.relogio.get()
+                }
+                # Envia com tópico
+                self.pub_socket.send_multipart([topic, msgpack.packb(pub_msg)])
+                
+                # Salva no log
+                salvar_log(f"[PUBLISH] Canal: {channel} | User: {user} | Msg: {message}")
+                
+                reply = {
+                    "msg": f"Mensagem publicada para o canal: {channel}",
+                    "clock": self.relogio.tick(),
+                    "timestamp": time.time()
+                }
+                print(f"[{self.nome}] Mensagem publicada no canal '{channel}': {user}: {message}", flush=True)
                     
             except Exception as e:
                 reply = {
-                    "service": "publish",
-                    "data": {
-                        "status": "erro",
-                        "message": f"Erro ao publicar: {str(e)}",
-                        "clock": self.relogio.tick(),
-                        "timestamp": time.time()
-                    }
+                    "msg": f"ERRO: {e}",
+                    "clock": self.relogio.tick(),
+                    "timestamp": time.time()
                 }
                 print(f"[{self.nome}] Falha ao publicar mensagem: {e}", flush=True)
                 
-        elif service == "message":
+        elif opcao == "message":
             try:
-                src = data.get("src")
-                dst = data.get("dst")
-                message = data.get("message")
-                timestamp = data.get("timestamp")
+                user = dados.get("user")
+                receptor = dados.get("receptor")
+                message = dados.get("message")
+                timestamp = dados.get("timestamp")
                 
-                # Verifica se o usuário destino existe
-                if not self.usuario_existe(dst):
-                    reply = {
-                        "service": "message",
-                        "data": {
-                            "status": "erro",
-                            "message": f"Usuário '{dst}' não existe",
-                            "clock": self.relogio.tick(),
-                            "timestamp": time.time()
-                        }
-                    }
-                    print(f"[{self.nome}] Erro: Usuário '{dst}' não existe", flush=True)
-                else:
-                    # Publica no tópico do usuário destino
-                    topic = dst.encode('utf-8')
-                    pub_msg = {
-                        "src": src,
-                        "dst": dst,
-                        "message": message,
-                        "timestamp": timestamp,
-                        "clock": self.relogio.get()
-                    }
-                    # Envia com tópico
-                    self.pub_socket.send_multipart([topic, msgpack.packb(pub_msg)])
-                    
-                    # Salva no log
-                    salvar_log(f"[MESSAGE] From: {src} | To: {dst} | Msg: {message}")
-                    
-                    reply = {
-                        "service": "message",
-                        "data": {
-                            "status": "OK",
-                            "clock": self.relogio.tick(),
-                            "timestamp": time.time()
-                        }
-                    }
-                    print(f"[{self.nome}] Mensagem privada de '{src}' para '{dst}': {message}", flush=True)
+                # Publica no tópico do usuário destino (receptor)
+                topic = receptor.encode('utf-8')
+                pub_msg = {
+                    "user": user,
+                    "receptor": receptor,
+                    "message": message,
+                    "timestamp": timestamp,
+                    "clock": self.relogio.get()
+                }
+                # Envia com tópico
+                self.pub_socket.send_multipart([topic, msgpack.packb(pub_msg)])
+                
+                # Salva no log
+                salvar_log(f"[MESSAGE] From: {user} | To: {receptor} | Msg: {message}")
+                
+                reply = {
+                    "msg": f"Mensagem privada enviada para o usuário: {receptor}",
+                    "clock": self.relogio.tick(),
+                    "timestamp": time.time()
+                }
+                print(f"[{self.nome}] Mensagem privada de '{user}' para '{receptor}': {message}", flush=True)
                     
             except Exception as e:
                 reply = {
-                    "service": "message",
-                    "data": {
-                        "status": "erro",
-                        "message": f"Erro ao enviar mensagem: {str(e)}",
-                        "clock": self.relogio.tick(),
-                        "timestamp": time.time()
-                    }
+                    "msg": f"ERRO: {e}",
+                    "clock": self.relogio.tick(),
+                    "timestamp": time.time()
                 }
                 print(f"[{self.nome}] Falha ao enviar mensagem privada: {e}", flush=True)
                 
         else:
             reply = {
-                "service": "error",
-                "data": {
-                    "status": "erro",
-                    "message": "Serviço não encontrado",
-                    "clock": self.relogio.tick(),
-                    "timestamp": time.time()
-                }
+                "msg": "ERRO: função não encontrada",
+                "clock": self.relogio.tick(),
+                "timestamp": time.time()
             }
         
         return reply

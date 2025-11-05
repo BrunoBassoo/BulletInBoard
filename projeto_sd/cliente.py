@@ -70,8 +70,8 @@ class Cliente:
                 if "channel" in mensagem:
                     print(f"\n[{mensagem['channel']}] {mensagem['user']}: {mensagem['message']}", flush=True)
                     print(f"   [Clock: {mensagem.get('clock', 'N/A')} | {datetime.fromtimestamp(mensagem.get('timestamp', 0)).strftime('%H:%M:%S')}]", flush=True)
-                elif "dst" in mensagem:
-                    print(f"\nMensagem privada de {mensagem['src']}: {mensagem['message']}", flush=True)
+                elif "receptor" in mensagem:
+                    print(f"\nMensagem privada de {mensagem['user']}: {mensagem['message']}", flush=True)
                     print(f"   [Clock: {mensagem.get('clock', 'N/A')} | {datetime.fromtimestamp(mensagem.get('timestamp', 0)).strftime('%H:%M:%S')}]", flush=True)
                 elif "coordinator" in mensagem.get("data", {}):
                     print(f"\nNovo coordenador eleito: {mensagem['data']['coordinator']}", flush=True)
@@ -81,15 +81,15 @@ class Cliente:
                     print(f"\n[CLIENTE] Erro ao receber mensagem: {e}", flush=True)
                 time.sleep(0.5)
     
-    def enviar_request(self, service, data):
+    def enviar_request(self, opcao, dados):
         """Envia requisição e recebe resposta"""
         try:
             # Incrementa relógio antes de enviar
-            data["clock"] = self.relogio.tick()
+            dados["clock"] = self.relogio.tick()
             
             request = {
-                "service": service,
-                "data": data
+                "opcao": opcao,
+                "dados": dados
             }
             
             self.socket.send(msgpack.packb(request))
@@ -97,8 +97,8 @@ class Cliente:
             reply = msgpack.unpackb(reply_data, raw=False)
             
             # Atualiza relógio lógico ao receber
-            if "data" in reply and "clock" in reply["data"]:
-                self.relogio.update(reply["data"]["clock"])
+            if "clock" in reply:
+                self.relogio.update(reply["clock"])
             
             return reply
         except Exception as e:
@@ -140,61 +140,51 @@ class Cliente:
                     print("\n------ Login ------")
                     user = input("Entre com o seu usuário: ")
                     
-                    data = {
+                    dados = {
                         "user": user,
-                        "timestamp": datetime.now().timestamp()
+                        "time": datetime.now().timestamp()
                     }
                     
-                    reply = self.enviar_request("login", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
+                    reply = self.enviar_request("login", dados)
+                    if reply:
                         self.nome_usuario = user
                         # Inscreve no tópico do próprio nome para receber mensagens privadas
                         self.inscrever_topico(user)
-                        print(f"Login realizado com sucesso! [Clock: {reply['data'].get('clock')}]")
+                        print(f"Resposta: {reply}")
                     else:
-                        print(f"Erro no login: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                        print(f"Erro no login")
 
                 # FEITO
                 elif opcao == "2":
                     print("\n------ Listar usuários ------")
-                    data = {"timestamp": datetime.now().timestamp()}
+                    dados = {}
                     
-                    reply = self.enviar_request("listar", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
-                        users = reply["data"].get("users", [])
-                        print(f"Usuários cadastrados: {', '.join(users) if users else 'Nenhum'}")
-                        print(f"   [Clock: {reply['data'].get('clock')}]")
-                    else:
-                        print(f"Erro ao listar: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                    reply = self.enviar_request("listar", dados)
+                    if reply:
+                        print(f"Resposta: {reply}")
 
                 # FEITO
                 elif opcao == "3":
                     print("\n------ Cadastrar canal ------")
                     canal = input("Entre com o nome do canal: ")
                     
-                    data = {
+                    dados = {
                         "canal": canal,
-                        "timestamp": datetime.now().timestamp()
+                        "time": datetime.now().timestamp()
                     }
                     
-                    reply = self.enviar_request("cadastrarCanal", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
-                        print(f"Canal '{canal}' cadastrado com sucesso! [Clock: {reply['data'].get('clock')}]")
-                    else:
-                        print(f" Erro ao cadastrar canal: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                    reply = self.enviar_request("cadastrarCanal", dados)
+                    if reply:
+                        print(f"Resposta: {reply}")
 
                 # FEITO
                 elif opcao == "4":
                     print("\n------ Listar canais ------")
-                    data = {"timestamp": datetime.now().timestamp()}
+                    dados = {}
                     
-                    reply = self.enviar_request("listarCanal", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
-                        channels = reply["data"].get("channels", [])
-                        print(f"Canais disponíveis: {', '.join(channels) if channels else 'Nenhum'}")
-                        print(f"   [Clock: {reply['data'].get('clock')}]")
-                    else:
-                        print(f"Erro ao listar canais: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                    reply = self.enviar_request("listarCanal", dados)
+                    if reply:
+                        print(f"Resposta: {reply}")
 
                 # FEITO
                 elif opcao == "5":
@@ -215,18 +205,16 @@ class Cliente:
                     nome_do_canal = input("Entre com o nome do canal: ")
                     mensagem = input("Entre com a mensagem: ")
                     
-                    data = {
+                    dados = {
                         "user": self.nome_usuario,
                         "channel": nome_do_canal,
                         "message": mensagem,
                         "timestamp": datetime.now().timestamp()
                     }
                     
-                    reply = self.enviar_request("publish", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
-                        print(f"Mensagem publicada no canal '{nome_do_canal}'! [Clock: {reply['data'].get('clock')}]")
-                    else:
-                        print(f"Erro: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                    reply = self.enviar_request("publish", dados)
+                    if reply:
+                        print(f"Resposta: {reply}")
 
                 # FEITO
                 elif opcao == "7":
@@ -239,18 +227,16 @@ class Cliente:
                     nome_do_receptor = input("Entre com o nome do receptor: ")
                     mensagem = input("Entre com a mensagem: ")
                     
-                    data = {
-                        "src": self.nome_usuario,
-                        "dst": nome_do_receptor,
+                    dados = {
+                        "user": self.nome_usuario,
+                        "receptor": nome_do_receptor,
                         "message": mensagem,
                         "timestamp": datetime.now().timestamp()
                     }
                     
-                    reply = self.enviar_request("message", data)
-                    if reply and reply.get("data", {}).get("status") == "OK":
-                        print(f"Mensagem enviada para '{nome_do_receptor}'! [Clock: {reply['data'].get('clock')}]")
-                    else:
-                        print(f" Erro: {reply.get('data', {}).get('message', 'Erro desconhecido')}")
+                    reply = self.enviar_request("message", dados)
+                    if reply:
+                        print(f"Resposta: {reply}")
                 
                 else:
                     print("Opção inválida! Tente novamente.")
