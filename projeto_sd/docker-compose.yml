@@ -110,9 +110,6 @@ services:
       - broker
       - proxy
       - servidor
-    volumes:
-      - ./cliente.c:/app/cliente.c
-      - ./Makefile:/app/Makefile
 
   # Bots - 2 réplicas de clientes automatizados
   bot:
