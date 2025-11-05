@@ -81,7 +81,7 @@ services:
     ports:
       - "5561"  # Porta para comunicação entre servidores
 
-  # Cliente Python - Interface interativa
+  # Cliente - Interface interativa
   cliente:
     build:
       context: .
@@ -96,20 +96,6 @@ services:
       - servidor
     volumes:
       - ./cliente.py:/app/cliente.py
-
-  # Cliente C - Interface interativa em C (alternativo)
-  cliente_c:
-    build:
-      context: .
-      dockerfile: ./DockerFiles/Dockerfile_cliente_c
-    image: cc7261:cliente_c
-    container_name: cliente_c
-    stdin_open: true
-    tty: true
-    depends_on:
-      - broker
-      - proxy
-      - servidor
 
   # Bots - 2 réplicas de clientes automatizados
   bot:
