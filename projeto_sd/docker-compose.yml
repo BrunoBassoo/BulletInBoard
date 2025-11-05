@@ -1,5 +1,18 @@
 services:
 
+  # Servidor de Referência - Gerencia ranks, lista de servidores e heartbeat
+  referencia:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_referencia
+    image: cc7261:pyzmq
+    container_name: referencia
+    volumes:
+      - ./referencia.py:/app/referencia.py
+    ports:
+      - 5560:5560
+
+  # Proxy - Intermediário para Pub/Sub
   proxy:
     build:
       context: .
@@ -12,6 +25,7 @@ services:
       - 5557:5557
       - 5558:5558
 
+  # Publisher - Intermediário entre servidores e proxy
   publisher:
     build:
       context: .
@@ -20,9 +34,12 @@ services:
     container_name: publisher
     volumes:
       - ./publisher.py:/app/publisher.py
-    deploy:
-      replicas: 1
+    ports:
+      - 5559:5559
+    depends_on:
+      - proxy
 
+  # Subscriber - Para monitoramento de mensagens
   subscriber:
     build:
       context: .
@@ -31,41 +48,85 @@ services:
     container_name: subscriber
     volumes:
       - ./subscriber.py:/app/subscriber.py
-    deploy:
-      replicas: 1
-  
+    depends_on:
+      - proxy
+
+  # Broker - Intermediário para Req/Rep
   broker:
     build:
       context: .
       dockerfile: ./DockerFiles/Dockerfile_broker
+    image: cc7261:pyzmq
     container_name: broker
+    volumes:
+      - ./broker.py:/app/broker.py
     ports:
       - 5555:5555
       - 5556:5556
 
+  # Servidores - 3 réplicas com sincronização e eleição
   servidor:
     build:
       context: .
       dockerfile: ./DockerFiles/Dockerfile_servidor
+    image: cc7261:pyzmq
     volumes:
       - ./servidor.py:/app/servidor.py
     depends_on:
       - broker
+      - publisher
+      - referencia
     deploy:
       replicas: 3
-    
+    ports:
+      - "5561"  # Porta para comunicação entre servidores
 
+  # Cliente Python - Interface interativa
   cliente:
     build:
       context: .
       dockerfile: ./DockerFiles/Dockerfile_cliente
+    image: cc7261:pyzmq
     container_name: cliente
     stdin_open: true
     tty: true
     depends_on:
+      - broker
+      - proxy
       - servidor
     volumes:
       - ./cliente.py:/app/cliente.py
-    deploy:
-      replicas: 1
 
+  # Cliente C - Interface interativa em C (alternativo)
+  cliente_c:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_cliente_c
+    image: cc7261:cliente_c
+    container_name: cliente_c
+    stdin_open: true
+    tty: true
+    depends_on:
+      - broker
+      - proxy
+      - servidor
+    volumes:
+      - ./cliente.c:/app/cliente.c
+      - ./Makefile:/app/Makefile
+
+  # Bots - 2 réplicas de clientes automatizados
+  bot:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_bot
+    image: cc7261:pyzmq
+    volumes:
+      - ./bot.py:/app/bot.py
+    depends_on:
+      - broker
+      - proxy
+      - servidor
+    deploy:
+      replicas: 2
+    environment:
+      - BOT_ID=1

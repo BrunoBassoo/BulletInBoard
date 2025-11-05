@@ -11,3 +11,4 @@ RUN pip install --no-cache-dir pyzmq msgpack
 COPY ../publisher.py .
 
 CMD ["python", "publisher.py"]
+
