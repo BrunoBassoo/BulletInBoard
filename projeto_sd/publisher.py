@@ -1,45 +1,36 @@
+
 import zmq
+from time import sleep
 import msgpack
-import time
 
 context = zmq.Context()
 
-# SUB para receber do servidor na porta 5559
+# SUB para receber do servidor
 servidor_sub = context.socket(zmq.SUB)
-servidor_sub.bind("tcp://*:5559")
+servidor_sub.connect("tcp://servidor:5559")  # Porta correta do servidor
 servidor_sub.setsockopt_string(zmq.SUBSCRIBE, "")  # Assina todos os tópicos
 
-# PUB para enviar ao proxy XSUB na porta 5557
+# PUB para enviar ao proxy
 proxy_pub = context.socket(zmq.PUB)
-proxy_pub.connect("tcp://proxy:5557")
+proxy_pub.connect("tcp://proxy:5557")  # Proxy XSUB
 
-print("[PUBLISHER] Iniciando publisher intermediário...", flush=True)
-print("[PUBLISHER] Recebendo de servidores (porta 5559)", flush=True)
-print("[PUBLISHER] Enviando para proxy (porta 5557)", flush=True)
-
-time.sleep(2)  # Aguarda conexões estabilizarem
+print("[PUBLISHER] Iniciando publisher...", flush=True)
 
 while True:
     try:
-        # Recebe mensagem do servidor (pode ter tópico ou não)
-        parts = servidor_sub.recv_multipart()
+        # Recebe mensagem serializada com MessagePack
+        mensagem_data = servidor_sub.recv()
+        mensagem = msgpack.unpackb(mensagem_data, raw=False)
+        print(f"[PUBLISHER] Recebido do servidor: {mensagem}", flush=True)
         
-        if len(parts) == 2:
-            # Mensagem com tópico
-            topic, data = parts
-            mensagem = msgpack.unpackb(data, raw=False)
-            print(f"[PUBLISHER] Recebido com tópico '{topic.decode('utf-8')}': {mensagem.get('message', mensagem)}", flush=True)
-            # Repassa com tópico para o proxy
-            proxy_pub.send_multipart([topic, data])
-        else:
-            # Mensagem sem tópico (formato antigo)
-            data = parts[0]
-            mensagem = msgpack.unpackb(data, raw=False)
-            print(f"[PUBLISHER] Recebido sem tópico: {mensagem}", flush=True)
-            # Repassa para o proxy
-            proxy_pub.send(data)
+        # Envia mensagem serializada com MessagePack
+        proxy_pub.send(msgpack.packb(mensagem))
+        print(f"[PUBLISHER] Enviado ao proxy: {mensagem}", flush=True)
         
     except Exception as e:
         print(f"[PUBLISHER] Erro: {e}", flush=True)
-        time.sleep(0.5)
+    sleep(0.5)
 
+proxy_pub.close()
+servidor_sub.close()
+context.close()

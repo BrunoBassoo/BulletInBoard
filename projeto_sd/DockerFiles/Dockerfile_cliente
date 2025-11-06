@@ -10,5 +10,4 @@ RUN pip install --no-cache-dir pyzmq msgpack
 
 COPY ../cliente.py .
 
-# Inicia diretamente o cliente Python
-CMD ["python", "-u", "cliente.py"]
+CMD ["python", "cliente.py"]
