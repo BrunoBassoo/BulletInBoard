@@ -1,5 +1,16 @@
 services:
 
+  referencia:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_referencia
+    image: cc7261:pyzmq
+    container_name: referencia
+    volumes:
+      - ./servidor_referencia.py:/app/servidor_referencia.py
+    ports:
+      - 5560:5560
+
   proxy:
     build:
       context: .
@@ -49,8 +60,12 @@ services:
       dockerfile: ./DockerFiles/Dockerfile_servidor
     volumes:
       - ./servidor.py:/app/servidor.py
+    ports:
+      - "5561"  # Porta para sincronização entre servidores
     depends_on:
       - broker
+      - referencia
+      - proxy
     deploy:
       replicas: 3
     
@@ -68,4 +83,16 @@ services:
       - ./cliente.py:/app/cliente.py
     deploy:
       replicas: 1
+
+  cliente_automatico:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_cliente_automatico
+    depends_on:
+      - servidor
+      - broker
+    volumes:
+      - ./cliente_automatico.py:/app/cliente_automatico.py
+    deploy:
+      replicas: 2
 

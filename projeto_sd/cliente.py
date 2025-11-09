@@ -46,13 +46,13 @@ while True:
         case "1":
             print("\n------ Login ------")
             user = input("Entre com o seu usuário: ")
-            time = datetime.now().timestamp()
+            timestamp = datetime.now().timestamp()
 
             request = {
-                "opcao": "login",
-                "dados": {
+                "service": "login",
+                "data": {
                     "user": user,
-                    "time": time,
+                    "timestamp": timestamp,
                     "clock": relogio.tick()
                 }
             }
@@ -60,8 +60,8 @@ while True:
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
             # Atualiza relógio lógico ao receber
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
 
             
@@ -69,17 +69,19 @@ while True:
         # FEITO
         case "2":
             print("\n------ Listar usuários ------")
+            timestamp = datetime.now().timestamp()
             request = {
-                "opcao": "listar",
-                "dados": {
+                "service": "users",
+                "data": {
+                    "timestamp": timestamp,
                     "clock": relogio.tick()
                 }
             }
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
             
             
@@ -88,21 +90,21 @@ while True:
         case "3":
             print("\n------ Cadastrar canal ------")
             canal = input("Entre com o canal: ")
-            time = datetime.now().timestamp()
+            timestamp = datetime.now().timestamp()
 
             request = {
-                "opcao": "cadastrarCanal",
-                "dados": {
-                    "canal": canal,
-                    "time": time,
+                "service": "channel",
+                "data": {
+                    "channel": canal,
+                    "timestamp": timestamp,
                     "clock": relogio.tick()
                 }
             }
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
 
             
@@ -110,17 +112,19 @@ while True:
         # FEITO
         case "4":
             print("\n------ Listar canais ------")
+            timestamp = datetime.now().timestamp()
             request = {
-                "opcao": "listarCanal",
-                "dados": {
+                "service": "channels",
+                "data": {
+                    "timestamp": timestamp,
                     "clock": relogio.tick()
                 }
             }
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
         
             
@@ -134,8 +138,8 @@ while True:
             timestamp = datetime.now().timestamp()
 
             request = {
-                "opcao": "publish",
-                "dados": {
+                "service": "publish",
+                "data": {
                     "user": nome_do_usuário,
                     "channel": nome_do_canal,
                     "message": mensagem,
@@ -146,25 +150,25 @@ while True:
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
             
             
         
-        # EM ANDAMENTO
+        # FEITO
         case "6":
             print("\n------ Enviando mensagem privada ------")
-            nome_do_usuário = input("Entre com o seu usuário: ")
-            nome_do_receptor = input("Entre com o nome do receptor: ")
+            nome_do_remetente = input("Entre com o seu usuário (origem): ")
+            nome_do_destinatario = input("Entre com o nome do destinatário: ")
             mensagem = input("Entre com a mensagem a ser enviada: ")
             timestamp = datetime.now().timestamp()
 
             request = {
-                "opcao": "message",
-                "dados": {
-                    "user": nome_do_usuário,
-                    "receptor": nome_do_receptor,
+                "service": "message",
+                "data": {
+                    "src": nome_do_remetente,
+                    "dst": nome_do_destinatario,
                     "message": mensagem,
                     "timestamp": timestamp,
                     "clock": relogio.tick()
@@ -173,7 +177,7 @@ while True:
             socket.send(msgpack.packb(request))
             reply_data = socket.recv()
             reply = msgpack.unpackb(reply_data, raw=False)
-            if "clock" in reply:
-                relogio.update(reply["clock"])
+            if "data" in reply and "clock" in reply["data"]:
+                relogio.update(reply["data"]["clock"])
             print(f"Resposta: {reply}")
     
