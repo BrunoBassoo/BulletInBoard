@@ -33,46 +33,34 @@ def carregar_dados():
         try:
             with open(usuarios_path, "r", encoding="utf-8") as f:
                 usuarios = json.load(f)
-            print(f"[S] {len(usuarios)} usuários carregados do disco", flush=True)
-        except Exception as e:
-            print(f"[S] Erro ao carregar usuários: {e}", flush=True)
-    else:
-        print(f"[S] Arquivo usuarios.json não existe ainda", flush=True)
+        except:
+            pass
     
-    # Carregar canais
     if os.path.exists(canais_path):
         try:
             with open(canais_path, "r", encoding="utf-8") as f:
                 canais = json.load(f)
-            print(f"[S] {len(canais)} canais carregados do disco", flush=True)
-        except Exception as e:
-            print(f"[S] Erro ao carregar canais: {e}", flush=True)
-    else:
-        print(f"[S] Arquivo canais.json não existe ainda", flush=True)
+        except:
+            pass
     
     return usuarios, canais
 
-# Função para salvar usuários em disco
 def salvar_usuarios(usuarios):
     try:
         usuarios_path = os.path.join(DATA_DIR, "usuarios.json")
         with open(usuarios_path, "w", encoding="utf-8") as f:
             json.dump(usuarios, f, indent=2, ensure_ascii=False)
-        print(f"[S] ✅ {len(usuarios)} usuários salvos em usuarios.json", flush=True)
-    except Exception as e:
-        print(f"[S] Erro ao salvar usuários: {e}", flush=True)
+    except:
+        pass
 
-# Função para salvar canais em disco
 def salvar_canais(canais):
     try:
         canais_path = os.path.join(DATA_DIR, "canais.json")
         with open(canais_path, "w", encoding="utf-8") as f:
             json.dump(canais, f, indent=2, ensure_ascii=False)
-        print(f"[S] ✅ {len(canais)} canais salvos em canais.json", flush=True)
-    except Exception as e:
-        print(f"[S] Erro ao salvar canais: {e}", flush=True)
+    except:
+        pass
 
-# Função para salvar publicações em disco
 def salvar_publicacao(publicacao):
     try:
         publicacoes_path = os.path.join(DATA_DIR, "publicacoes.json")
@@ -80,16 +68,12 @@ def salvar_publicacao(publicacao):
         if os.path.exists(publicacoes_path):
             with open(publicacoes_path, "r", encoding="utf-8") as f:
                 publicacoes = json.load(f)
-        
         publicacoes.append(publicacao)
-        
         with open(publicacoes_path, "w", encoding="utf-8") as f:
             json.dump(publicacoes, f, indent=2, ensure_ascii=False)
-        print(f"[S] Publicação salva (total: {len(publicacoes)})", flush=True)
-    except Exception as e:
-        print(f"[S] Erro ao salvar publicação: {e}", flush=True)
+    except:
+        pass
 
-# Função para salvar mensagens privadas em disco
 def salvar_mensagem_privada(mensagem):
     try:
         mensagens_path = os.path.join(DATA_DIR, "mensagens.json")
@@ -97,37 +81,22 @@ def salvar_mensagem_privada(mensagem):
         if os.path.exists(mensagens_path):
             with open(mensagens_path, "r", encoding="utf-8") as f:
                 mensagens = json.load(f)
-        
         mensagens.append(mensagem)
-        
         with open(mensagens_path, "w", encoding="utf-8") as f:
             json.dump(mensagens, f, indent=2, ensure_ascii=False)
-        print(f"[S] Mensagem privada salva (total: {len(mensagens)})", flush=True)
-    except Exception as e:
-        print(f"[S] Erro ao salvar mensagem: {e}", flush=True)
+    except:
+        pass
 
 # Função para replicar mensagem para outros servidores
 def replicar_para_outros_servidores(mensagem):
-    """Replica dados para todos os outros servidores ativos"""
     def enviar_replicacao():
         try:
-            # Marcar como replicação para evitar loop infinito
             mensagem_copy = mensagem.copy()
             mensagem_copy["replicated"] = True
-            
-            service = mensagem.get("service")
-            print(f"[S] Iniciando replicação de {service}...", flush=True)
-            
-            # Obter lista de servidores
             lista_servidores = obter_lista_servidores()
-            print(f"[S] Servidores para replicar: {[s['name'] for s in lista_servidores if s['name'] != NOME_SERVIDOR]}", flush=True)
             
-            replicacoes_ok = 0
-            # Enviar para cada servidor (exceto este)
             for servidor in lista_servidores:
                 nome_servidor = servidor.get("name")
-                
-                # Não replicar para si mesmo
                 if nome_servidor == NOME_SERVIDOR:
                     continue
                 
@@ -137,22 +106,15 @@ def replicar_para_outros_servidores(mensagem):
                     sock.connect(f"tcp://{nome_servidor}:{REPLICATION_PORT}")
                     sock.setsockopt(zmq.RCVTIMEO, 2000)
                     sock.setsockopt(zmq.SNDTIMEO, 2000)
-                    
                     sock.send(msgpack.packb(mensagem_copy))
-                    ack = sock.recv()  # Aguardar ACK
-                    
-                    replicacoes_ok += 1
-                    
+                    sock.recv()
                     sock.close()
                     ctx.term()
                 except:
-                    pass  # Falha silenciosa
-            
-            print(f"[S] Replicação de {service} concluída: {replicacoes_ok} servidores", flush=True)
-        except Exception as e:
-            print(f"[S] Erro na replicação: {e}", flush=True)
+                    pass
+        except:
+            pass
     
-    # Executar em thread separada para não bloquear
     threading.Thread(target=enviar_replicacao, daemon=True).start()
 
 # Classe do relógio lógico
@@ -331,8 +293,6 @@ def sincronizar_relogio():
                     rtt = t2 - t1
                     tempo_estimado_coord = tempo_coord + (rtt / 2)
                     ajuste_relogio = tempo_estimado_coord - time.time()
-                    
-                    print(f"[S] Relógio sincronizado. Ajuste: {ajuste_relogio:.6f}s", flush=True)
                 
                 sock.close()
                 ctx.term()
@@ -383,12 +343,8 @@ def iniciar_eleicao():
         except:
             pass
     
-    # Se nenhum servidor maior respondeu, este servidor é o coordenador
     if not recebeu_ok:
         coordenador_atual = NOME_SERVIDOR
-        print(f"[S] {NOME_SERVIDOR} eleito como coordenador!", flush=True)
-        
-        # Publicar no tópico "servers"
         pub_msg = {
             "type": "election",
             "topic": "servers",
@@ -403,9 +359,7 @@ def iniciar_eleicao():
         election_pub_socket.send(msgpack.packb(pub_msg))
 
 def monitor_eleicoes():
-    """Monitora publicações de eleição no tópico servers"""
     global coordenador_atual
-    
     while True:
         try:
             topic = election_sub_socket.recv_string()
@@ -416,31 +370,20 @@ def monitor_eleicoes():
                 novo_coord = msg.get("data", {}).get("coordinator")
                 if novo_coord:
                     coordenador_atual = novo_coord
-                    print(f"[S] Novo coordenador: {coordenador_atual}", flush=True)
-                    
                     if "clock" in msg.get("data", {}):
                         relogio.update(msg["data"]["clock"])
         except:
             pass
 
-# Aguardar servidor de referência estar pronto
-print(f"[S] Nome do servidor: {NOME_SERVIDOR}", flush=True)
-print(f"[S] Aguardando servidor de referência...", flush=True)
 time.sleep(3)
-
-# Registrar no servidor de referência
 registrar_no_servidor_referencia()
 
-# Iniciar threads de manutenção apenas se registrado
 if rank_servidor is not None:
     threading.Thread(target=enviar_heartbeat, daemon=True).start()
     threading.Thread(target=sincronizar_relogio, daemon=True).start()
     threading.Thread(target=monitor_eleicoes, daemon=True).start()
-    
-    # Se for o primeiro servidor (rank 1), se elege como coordenador
     if rank_servidor == 1:
         coordenador_atual = NOME_SERVIDOR
-        print(f"[S] {NOME_SERVIDOR} é o coordenador inicial", flush=True)
 
 PUB_PORT = 5559  # Porta para publisher
 
@@ -452,52 +395,53 @@ socket.connect("tcp://broker:5556")
 sync_socket = context.socket(zmq.REP)
 sync_socket.bind("tcp://*:5561")
 
-# Socket para receber replicações de outros servidores
 replication_socket = context.socket(zmq.REP)
 replication_socket.bind(f"tcp://*:{REPLICATION_PORT}")
-print(f"[S] Socket de replicação na porta {REPLICATION_PORT}", flush=True)
 
-# Criar socket PUB uma única vez e reutilizar
 pub_socket = context.socket(zmq.PUB)
 pub_socket.bind(f"tcp://*:{PUB_PORT}")
-print(f"[S] Socket PUB criado e bind na porta {PUB_PORT}", flush=True)
 
 # Carregar dados persistidos
 usuarios, canais = carregar_dados()
 
-# Configurar poller para gerenciar múltiplos sockets
-poller = zmq.Poller()
-poller.register(socket, zmq.POLLIN)              # Socket principal (clientes)
-poller.register(sync_socket, zmq.POLLIN)         # Socket de sincronização
-poller.register(replication_socket, zmq.POLLIN)  # Socket de replicação
+def recarregar_dados_periodicamente():
+    global usuarios, canais
+    while True:
+        time.sleep(2)
+        try:
+            usuarios_novos, canais_novos = carregar_dados()
+            usuarios = usuarios_novos
+            canais = canais_novos
+        except:
+            pass
 
-print(f"[S] Servidor {NOME_SERVIDOR} pronto!", flush=True)
+threading.Thread(target=recarregar_dados_periodicamente, daemon=True).start()
+
+poller = zmq.Poller()
+poller.register(socket, zmq.POLLIN)
+poller.register(sync_socket, zmq.POLLIN)
+poller.register(replication_socket, zmq.POLLIN)
+
+print(f"[S] {NOME_SERVIDOR} pronto", flush=True)
 
 while True:
     try:
         socks = dict(poller.poll())
         
-        # Mensagens de clientes (através do broker)
         if socket in socks:
-            # Recebe mensagem serializada com MessagePack
             request_data = socket.recv()
             request = msgpack.unpackb(request_data, raw=False)
-            service = request.get("service", request.get("opcao"))  # Suporta ambos por compatibilidade temporária
-            data = request.get("data", request.get("dados"))  # Suporta ambos por compatibilidade temporária
+            service = request.get("service", request.get("opcao"))
+            data = request.get("data", request.get("dados"))
             
-            # Salva a mensagem recebida no log
-            salvar_log(f"[{time.time()}] Service: {service} | Data: {data}")
+            salvar_log(f"[{time.time()}] {service}")
             
-            # Atualiza relógio lógico ao receber
             if data and "clock" in data:
                 relogio.update(data["clock"])
             
-            # Incrementar contador de mensagens
             contador_mensagens += 1
             
-            # Processar requisição do cliente
             match service:
-                # FEITO
                 case "login":
                     user = data.get("user")
                     timestamp = data.get("timestamp")
@@ -532,22 +476,12 @@ while True:
                                 "clock": relogio.tick()
                             }
                         }
-                        print(f"[S] - Login do {user} feito!", flush=True)
-                        # Replicar para outros servidores
+                        print(f"[S] Login: {user}", flush=True)
                         replicar_para_outros_servidores({"service": "login", "data": data})
 
-                # FEITO
-                case "users" | "listar":  # Suporta ambos por compatibilidade
-                    # Extrair apenas os nomes dos usuários
+                case "users" | "listar":
                     lista_usuarios = [u.get("user") for u in usuarios]
-                    
-                    # Exibir cada usuário
-                    if usuarios:
-                        print(f"[S] Listando {len(usuarios)} usuários cadastrados:", flush=True)
-                        for i, usuario in enumerate(usuarios):
-                            print(f"    Usuario {i}: {usuario.get('user')} | timestamp: {usuario.get('timestamp')}", flush=True)
-                    else:
-                        print(f"[S] Nenhum usuário cadastrado ainda.", flush=True)
+                    print(f"[S] Listando usuarios: {len(usuarios)}", flush=True)
                     
                     reply = {
                         "service": "users",
@@ -558,12 +492,9 @@ while True:
                         }
                     }
             
-                # FEITO
-                case "channel" | "cadastrarCanal":  # Suporta ambos por compatibilidade
+                case "channel" | "cadastrarCanal":
                     channel = data.get("channel", data.get("canal"))
                     timestamp = data.get("timestamp")
-                    
-                    # Verificar se o canal já existe
                     canal_existe = any(c.get("channel") == channel for c in canais)
                     
                     if canal_existe:
@@ -572,19 +503,13 @@ while True:
                             "data": {
                                 "status": "erro",
                                 "timestamp": time.time(),
-                                "description": "Canal já cadastrado",
+                                "description": "Canal ja existe",
                                 "clock": relogio.tick()
                             }
                         }
-                        print(f"[S] - Tentativa de criar canal existente: {channel}", flush=True)
                     else:
-                        # Adicionar novo canal
-                        canais.append({
-                            "channel": channel,
-                            "timestamp": timestamp
-                        })
-                        salvar_canais(canais)  # Persistir em disco
-                        
+                        canais.append({"channel": channel, "timestamp": timestamp})
+                        salvar_canais(canais)
                         reply = {
                             "service": "channel",
                             "data": {
@@ -593,22 +518,12 @@ while True:
                                 "clock": relogio.tick()
                             }
                         }
-                        print(f"[S] - Cadastro do canal {channel} feito!", flush=True)
-                        # Replicar para outros servidores
+                        print(f"[S] Canal: {channel}", flush=True)
                         replicar_para_outros_servidores({"service": "channel", "data": data})
 
-                # FEITO
-                case "channels" | "listarCanal":  # Suporta ambos por compatibilidade
-                    # Extrair apenas os nomes dos canais
+                case "channels" | "listarCanal":
                     lista_canais = [c.get("channel") for c in canais]
-                    
-                    # Exibir cada canal
-                    if canais:
-                        print(f"[S] Listando {len(canais)} canais cadastrados:", flush=True)
-                        for i, canal in enumerate(canais):
-                            print(f"    Canal {i}: {canal.get('channel')} | timestamp: {canal.get('timestamp')}", flush=True)
-                    else:
-                        print(f"[S] Nenhum canal cadastrado ainda.", flush=True)
+                    print(f"[S] Listando canais: {len(canais)}", flush=True)
                     
                     reply = {
                         "service": "channels",
@@ -619,14 +534,11 @@ while True:
                         }
                     }
 
-                # FEITO
                 case "publish":
                     user = data.get("user")
                     channel = data.get("channel")
                     message = data.get("message")
                     timestamp = data.get("timestamp")
-                    
-                    # Verificar se o canal existe
                     canal_existe = any(c.get("channel") == channel for c in canais)
                     
                     if not canal_existe:
@@ -634,65 +546,40 @@ while True:
                             "service": "publish",
                             "data": {
                                 "status": "erro",
-                                "message": f"Canal '{channel}' não existe",
+                                "message": f"Canal nao existe",
                                 "timestamp": time.time(),
                                 "clock": relogio.tick()
                             }
                         }
-                        print(f"[S] - Tentativa de publicar em canal inexistente: {channel}", flush=True)
                     else:
-                        try:
-                            pub_msg = {
-                                "type": "channel",
-                                "topic": channel,  # Tópico é o nome do canal
-                                "user": user,
-                                "channel": channel,
-                                "message": message,
-                                "timestamp": timestamp,
-                                "clock": relogio.get()
+                        pub_msg = {
+                            "type": "channel",
+                            "topic": channel,
+                            "user": user,
+                            "channel": channel,
+                            "message": message,
+                            "timestamp": timestamp,
+                            "clock": relogio.get()
+                        }
+                        pub_socket.send(msgpack.packb(pub_msg))
+                        salvar_publicacao({"user": user, "channel": channel, "message": message, "timestamp": timestamp})
+                        
+                        reply = {
+                            "service": "publish",
+                            "data": {
+                                "status": "OK",
+                                "timestamp": time.time(),
+                                "clock": relogio.tick()
                             }
-                            # Usar o socket PUB já criado
-                            pub_socket.send(msgpack.packb(pub_msg))
-                            
-                            # Persistir a publicação
-                            salvar_publicacao({
-                                "user": user,
-                                "channel": channel,
-                                "message": message,
-                                "timestamp": timestamp
-                            })
-                            
-                            reply = {
-                                "service": "publish",
-                                "data": {
-                                    "status": "OK",
-                                    "timestamp": time.time(),
-                                    "clock": relogio.tick()
-                                }
-                            }
-                            print(f"[S] - Mensagem publicada no canal {channel}: {message}", flush=True)
-                            # Replicar para outros servidores
-                            replicar_para_outros_servidores({"service": "publish", "data": data})
-                        except Exception as e:
-                            reply = {
-                                "service": "publish",
-                                "data": {
-                                    "status": "erro",
-                                    "message": f"Erro ao publicar: {str(e)}",
-                                    "timestamp": time.time(),
-                                    "clock": relogio.tick()
-                                }
-                            }
-                            print(f"[S] - Falha ao publicar mensagem: {e}", flush=True)
+                        }
+                        print(f"[S] Publicado: {channel}", flush=True)
+                        replicar_para_outros_servidores({"service": "publish", "data": data})
 
-                # FEITO
                 case "message":
                     src = data.get("src")
                     dst = data.get("dst")
                     message = data.get("message")
                     timestamp = data.get("timestamp")
-                    
-                    # Verificar se o usuário de destino existe
                     usuario_existe = any(u.get("user") == dst for u in usuarios)
                     
                     if not usuario_existe:
@@ -700,56 +587,34 @@ while True:
                             "service": "message",
                             "data": {
                                 "status": "erro",
-                                "message": f"Usuário '{dst}' não existe",
+                                "message": f"Usuario nao existe",
                                 "timestamp": time.time(),
                                 "clock": relogio.tick()
                             }
                         }
-                        print(f"[S] - Tentativa de enviar mensagem para usuário inexistente: {dst}", flush=True)
                     else:
-                        try:
-                            pub_msg = {
-                                "type": "user",
-                                "topic": dst,  # Tópico é o nome do usuário de destino
-                                "src": src,
-                                "dst": dst,
-                                "message": message,
-                                "timestamp": timestamp,
-                                "clock": relogio.get()
+                        pub_msg = {
+                            "type": "user",
+                            "topic": dst,
+                            "src": src,
+                            "dst": dst,
+                            "message": message,
+                            "timestamp": timestamp,
+                            "clock": relogio.get()
+                        }
+                        pub_socket.send(msgpack.packb(pub_msg))
+                        salvar_mensagem_privada({"src": src, "dst": dst, "message": message, "timestamp": timestamp})
+                        
+                        reply = {
+                            "service": "message",
+                            "data": {
+                                "status": "OK",
+                                "timestamp": time.time(),
+                                "clock": relogio.tick()
                             }
-                            # Usar o socket PUB já criado
-                            pub_socket.send(msgpack.packb(pub_msg))
-                            
-                            # Persistir a mensagem
-                            salvar_mensagem_privada({
-                                "src": src,
-                                "dst": dst,
-                                "message": message,
-                                "timestamp": timestamp
-                            })
-                            
-                            reply = {
-                                "service": "message",
-                                "data": {
-                                    "status": "OK",
-                                    "timestamp": time.time(),
-                                    "clock": relogio.tick()
-                                }
-                            }
-                            print(f"[S] - Mensagem privada enviada de {src} para {dst}: {message}", flush=True)
-                            # Replicar para outros servidores
-                            replicar_para_outros_servidores({"service": "message", "data": data})
-                        except Exception as e:
-                            reply = {
-                                "service": "message",
-                                "data": {
-                                    "status": "erro",
-                                    "message": f"Erro ao enviar mensagem: {str(e)}",
-                                    "timestamp": time.time(),
-                                    "clock": relogio.tick()
-                                }
-                            }
-                            print(f"[S] - Falha ao enviar mensagem: {e}", flush=True)
+                        }
+                        print(f"[S] Mensagem: {src} -> {dst}", flush=True)
+                        replicar_para_outros_servidores({"service": "message", "data": data})
             
                 case _ :
                     reply = {
@@ -762,10 +627,8 @@ while True:
                         }
                     }
 
-            # Envia resposta usando MessagePack
             socket.send(msgpack.packb(reply))
         
-        # Mensagens de sincronização e eleição (de outros servidores)
         if sync_socket in socks:
             try:
                 request_data = sync_socket.recv()
@@ -773,12 +636,10 @@ while True:
                 service = request.get("service")
                 data = request.get("data", {})
                 
-                # Atualizar relógio lógico
                 if "clock" in data:
                     relogio.update(data["clock"])
                 
                 if service == "clock":
-                    # Responder com o horário atual
                     reply = {
                         "service": "clock",
                         "data": {
@@ -787,10 +648,7 @@ while True:
                             "clock": relogio.tick()
                         }
                     }
-                    print(f"[S] Requisição de clock recebida", flush=True)
-                
                 elif service == "election":
-                    # Responder OK e iniciar própria eleição
                     reply = {
                         "service": "election",
                         "data": {
@@ -799,118 +657,73 @@ while True:
                             "clock": relogio.tick()
                         }
                     }
-                    print(f"[S] Requisição de eleição recebida", flush=True)
-                    
-                    # Iniciar própria eleição em thread separada
                     threading.Thread(target=iniciar_eleicao, daemon=True).start()
-                
                 else:
                     reply = {
                         "service": service,
                         "data": {
                             "status": "erro",
-                            "message": "Serviço não reconhecido",
+                            "message": "Servico nao reconhecido",
                             "timestamp": time.time(),
                             "clock": relogio.tick()
                         }
                     }
                 
                 sync_socket.send(msgpack.packb(reply))
-            
             except:
                 pass
         
-        # Mensagens replicadas de outros servidores
         if replication_socket in socks:
             try:
                 request_data = replication_socket.recv()
                 request = msgpack.unpackb(request_data, raw=False)
                 
-                print(f"[S] Mensagem recebida na porta de replicação", flush=True)
-                
-                # Verificar se é uma replicação (para evitar loop infinito)
                 if request.get("replicated"):
                     service = request.get("service")
                     data = request.get("data", {})
                     
-                    # Atualizar relógio lógico
                     if "clock" in data:
                         relogio.update(data["clock"])
                     
-                    # Processar dados replicados
                     if service == "login":
                         user = data.get("user")
-                        timestamp = data.get("timestamp")
-                        
-                        print(f"[S] Recebeu replicação de usuário: {user}", flush=True)
-                        
-                        # Adicionar usuário se não existir
                         if not any(u.get("user") == user for u in usuarios):
-                            usuarios.append({"user": user, "timestamp": timestamp})
+                            usuarios.append({"user": user, "timestamp": data.get("timestamp")})
                             salvar_usuarios(usuarios)
-                            print(f"[S] Replicação: usuário '{user}' adicionado", flush=True)
-                        else:
-                            print(f"[S] Replicação: usuário '{user}' já existe", flush=True)
+                            print(f"[S] Replicado usuario: {user}", flush=True)
                     
                     elif service == "channel":
                         channel = data.get("channel", data.get("canal"))
-                        timestamp = data.get("timestamp")
-                        
-                        print(f"[S] Recebeu replicação de canal: {channel}", flush=True)
-                        
-                        # Adicionar canal se não existir
                         if not any(c.get("channel") == channel for c in canais):
-                            canais.append({"channel": channel, "timestamp": timestamp})
+                            canais.append({"channel": channel, "timestamp": data.get("timestamp")})
                             salvar_canais(canais)
-                            print(f"[S] Replicação: canal '{channel}' adicionado", flush=True)
-                        else:
-                            print(f"[S] Replicação: canal '{channel}' já existe", flush=True)
+                            print(f"[S] Replicado canal: {channel}", flush=True)
                     
                     elif service == "publish":
-                        # Salvar publicação
-                        user = data.get("user")
-                        channel = data.get("channel")
-                        message = data.get("message")
-                        timestamp = data.get("timestamp")
                         salvar_publicacao({
-                            "user": user,
-                            "channel": channel,
-                            "message": message,
-                            "timestamp": timestamp
+                            "user": data.get("user"),
+                            "channel": data.get("channel"),
+                            "message": data.get("message"),
+                            "timestamp": data.get("timestamp")
                         })
-                        print(f"[S] Replicação: publicação no canal '{channel}' salva", flush=True)
                     
                     elif service == "message":
-                        # Salvar mensagem privada
-                        src = data.get("src")
-                        dst = data.get("dst")
-                        message = data.get("message")
-                        timestamp = data.get("timestamp")
                         salvar_mensagem_privada({
-                            "src": src,
-                            "dst": dst,
-                            "message": message,
-                            "timestamp": timestamp
+                            "src": data.get("src"),
+                            "dst": data.get("dst"),
+                            "message": data.get("message"),
+                            "timestamp": data.get("timestamp")
                         })
-                        print(f"[S] Replicação: mensagem de '{src}' para '{dst}' salva", flush=True)
                     
-                    # Enviar ACK
-                    ack = {
-                        "status": "OK",
-                        "clock": relogio.tick()
-                    }
+                    ack = {"status": "OK", "clock": relogio.tick()}
                     replication_socket.send(msgpack.packb(ack))
                 else:
-                    # Mensagem sem marcador de replicação, ignorar
                     ack = {"status": "ignored"}
                     replication_socket.send(msgpack.packb(ack))
-            
             except:
                 pass
     
     except KeyboardInterrupt:
-        print(f"\n[S] Servidor {NOME_SERVIDOR} encerrando...", flush=True)
         break
-    except Exception as e:
-        print(f"[S] Erro: {e}", flush=True)
+    except:
         time.sleep(0.1)
