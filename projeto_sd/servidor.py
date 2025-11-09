@@ -430,16 +430,21 @@ while True:
         
         if socket in socks:
             request_data = socket.recv()
+            print(f"[S] Recebido {len(request_data)} bytes", flush=True)
             
             # Detectar formato: MessagePack ou JSON
             formato_json = False
             try:
                 request = msgpack.unpackb(request_data, raw=False)
+                print(f"[S] Formato: MessagePack", flush=True)
             except:
                 try:
                     request = json.loads(request_data.decode('utf-8'))
                     formato_json = True
-                except:
+                    print(f"[S] Formato: JSON", flush=True)
+                    print(f"[S] Request: {request}", flush=True)
+                except Exception as e:
+                    print(f"[S] Erro ao parsear: {e}", flush=True)
                     continue
             
             service = request.get("service", request.get("opcao"))

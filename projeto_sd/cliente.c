@@ -80,17 +80,25 @@ int main() {
                 "{\"service\":\"login\",\"data\":{\"user\":\"%s\",\"timestamp\":%ld,\"clock\":%d}}",
                 buffer_input, (long)time(NULL), relogio_tick(&relogio));
             
-            zmq_send(socket, message, strlen(message), 0);
+            printf("[DEBUG] Enviando: %s\n", message);
+            int sent = zmq_send(socket, message, strlen(message), 0);
+            printf("[DEBUG] Bytes enviados: %d\n", sent);
+            
             char recv_buf[4096];
             int size = zmq_recv(socket, recv_buf, sizeof(recv_buf), 0);
+            printf("[DEBUG] Bytes recebidos: %d\n", size);
             
             if (size > 0) {
                 recv_buf[size] = '\0';
+                printf("[DEBUG] Recebido: %s\n", recv_buf);
+                
                 if (strstr(recv_buf, "erro") != NULL) {
                     printf("Erro\n");
                 } else {
                     printf("Login OK\n");
                 }
+            } else {
+                printf("[DEBUG] Erro ao receber (size=%d, errno=%d)\n", size, zmq_errno());
             }
             fflush(stdout);
             
@@ -99,13 +107,25 @@ int main() {
                 "{\"service\":\"users\",\"data\":{\"timestamp\":%ld,\"clock\":%d}}",
                 (long)time(NULL), relogio_tick(&relogio));
             
+            printf("[DEBUG] Enviando: %s\n", message);
             zmq_send(socket, message, strlen(message), 0);
+            
             char recv_buf[4096];
             int size = zmq_recv(socket, recv_buf, sizeof(recv_buf), 0);
             
             if (size > 0) {
                 recv_buf[size] = '\0';
-                printf("Resposta recebida\n");
+                printf("[DEBUG] Recebido: %s\n", recv_buf);
+                
+                // Parse simples da resposta JSON
+                char *users_start = strstr(recv_buf, "\"users\":[");
+                if (users_start) {
+                    printf("Usuarios encontrados na resposta\n");
+                } else {
+                    printf("Lista de usuarios vazia ou erro\n");
+                }
+            } else {
+                printf("[DEBUG] Nenhuma resposta recebida (size=%d)\n", size);
             }
             fflush(stdout);
             
