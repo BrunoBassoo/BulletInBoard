@@ -33,7 +33,7 @@ services:
       - ./publisher.py:/app/publisher.py
     deploy:
       replicas: 1
-
+fix:
   subscriber:
     build:
       context: .
@@ -63,6 +63,7 @@ services:
       - dados_compartilhados:/app/dados  # Volume compartilhado para persistência
     ports:
       - "5561"  # Porta para sincronização entre servidores
+      - "5562"  # Porta para replicação de dados
     depends_on:
       - broker
       - referencia

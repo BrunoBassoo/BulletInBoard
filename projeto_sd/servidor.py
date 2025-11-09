@@ -9,11 +9,8 @@ import os
 DATA_DIR = "/app/dados"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Lista de endereços dos outros servidores (exemplo, ajuste conforme sua rede)
-OUTROS_SERVIDORES = [
-    "tcp://servidor2:5556",
-    "tcp://servidor3:5556"
-]
+# Porta para receber replicações de outros servidores
+REPLICATION_PORT = 5562
 
 # Função para salvar mensagens no arquivo de log
 def salvar_log(mensagem):
@@ -110,19 +107,43 @@ def salvar_mensagem_privada(mensagem):
         print(f"[S] Erro ao salvar mensagem: {e}", flush=True)
 
 # Função para replicar mensagem para outros servidores
-def replicar_para_outros_servidores(mensagem, lista_enderecos):
-    def enviar(endereco):
+def replicar_para_outros_servidores(mensagem):
+    """Replica dados para todos os outros servidores ativos"""
+    def enviar_replicacao():
         try:
-            ctx = zmq.Context()
-            sock = ctx.socket(zmq.REQ)
-            sock.connect(endereco)
-            sock.send(msgpack.packb(mensagem))
-            sock.close()
-            ctx.term()
-        except Exception as e:
-            print(f"Erro ao replicar para {endereco}: {e}")
-    for endereco in lista_enderecos:
-        threading.Thread(target=enviar, args=(endereco,)).start()
+            # Obter lista de servidores
+            lista_servidores = obter_lista_servidores()
+            
+            # Enviar para cada servidor (exceto este)
+            for servidor in lista_servidores:
+                nome_servidor = servidor.get("name")
+                
+                # Não replicar para si mesmo
+                if nome_servidor == NOME_SERVIDOR:
+                    continue
+                
+                try:
+                    ctx = zmq.Context()
+                    sock = ctx.socket(zmq.REQ)
+                    sock.connect(f"tcp://{nome_servidor}:{REPLICATION_PORT}")
+                    sock.setsockopt(zmq.RCVTIMEO, 2000)
+                    sock.setsockopt(zmq.SNDTIMEO, 2000)
+                    
+                    # Marcar como replicação para evitar loop infinito
+                    mensagem["replicated"] = True
+                    
+                    sock.send(msgpack.packb(mensagem))
+                    sock.recv()  # Aguardar ACK
+                    
+                    sock.close()
+                    ctx.term()
+                except:
+                    pass  # Falha silenciosa
+        except:
+            pass
+    
+    # Executar em thread separada para não bloquear
+    threading.Thread(target=enviar_replicacao, daemon=True).start()
 
 # Classe do relógio lógico
 class RelogioLogico:
@@ -416,18 +437,24 @@ socket.connect("tcp://broker:5556")
 sync_socket = context.socket(zmq.REP)
 sync_socket.bind("tcp://*:5561")
 
+# Socket para receber replicações de outros servidores
+replication_socket = context.socket(zmq.REP)
+replication_socket.bind(f"tcp://*:{REPLICATION_PORT}")
+print(f"[S] Socket de replicação na porta {REPLICATION_PORT}", flush=True)
+
 # Criar socket PUB uma única vez e reutilizar
 pub_socket = context.socket(zmq.PUB)
 pub_socket.bind(f"tcp://*:{PUB_PORT}")
-print(f"[S] - Socket PUB criado e bind na porta {PUB_PORT}", flush=True)
+print(f"[S] Socket PUB criado e bind na porta {PUB_PORT}", flush=True)
 
 # Carregar dados persistidos
 usuarios, canais = carregar_dados()
 
 # Configurar poller para gerenciar múltiplos sockets
 poller = zmq.Poller()
-poller.register(socket, zmq.POLLIN)       # Socket principal (clientes)
-poller.register(sync_socket, zmq.POLLIN)  # Socket de sincronização
+poller.register(socket, zmq.POLLIN)              # Socket principal (clientes)
+poller.register(sync_socket, zmq.POLLIN)         # Socket de sincronização
+poller.register(replication_socket, zmq.POLLIN)  # Socket de replicação
 
 print(f"[S] Servidor {NOME_SERVIDOR} pronto!", flush=True)
 
@@ -492,7 +519,7 @@ while True:
                         }
                         print(f"[S] - Login do {user} feito!", flush=True)
                         # Replicar para outros servidores
-                        replicar_para_outros_servidores({"service": "login", "data": data}, OUTROS_SERVIDORES)
+                        replicar_para_outros_servidores({"service": "login", "data": data})
 
                 # FEITO
                 case "users" | "listar":  # Suporta ambos por compatibilidade
@@ -553,7 +580,7 @@ while True:
                         }
                         print(f"[S] - Cadastro do canal {channel} feito!", flush=True)
                         # Replicar para outros servidores
-                        replicar_para_outros_servidores({"service": "channel", "data": data}, OUTROS_SERVIDORES)
+                        replicar_para_outros_servidores({"service": "channel", "data": data})
 
                 # FEITO
                 case "channels" | "listarCanal":  # Suporta ambos por compatibilidade
@@ -630,7 +657,7 @@ while True:
                             }
                             print(f"[S] - Mensagem publicada no canal {channel}: {message}", flush=True)
                             # Replicar para outros servidores
-                            replicar_para_outros_servidores({"service": "publish", "data": data}, OUTROS_SERVIDORES)
+                            replicar_para_outros_servidores({"service": "publish", "data": data})
                         except Exception as e:
                             reply = {
                                 "service": "publish",
@@ -696,7 +723,7 @@ while True:
                             }
                             print(f"[S] - Mensagem privada enviada de {src} para {dst}: {message}", flush=True)
                             # Replicar para outros servidores
-                            replicar_para_outros_servidores({"service": "message", "data": data}, OUTROS_SERVIDORES)
+                            replicar_para_outros_servidores({"service": "message", "data": data})
                         except Exception as e:
                             reply = {
                                 "service": "message",
@@ -774,6 +801,84 @@ while True:
                     }
                 
                 sync_socket.send(msgpack.packb(reply))
+            
+            except:
+                pass
+        
+        # Mensagens replicadas de outros servidores
+        if replication_socket in socks:
+            try:
+                request_data = replication_socket.recv()
+                request = msgpack.unpackb(request_data, raw=False)
+                
+                # Verificar se é uma replicação (para evitar loop infinito)
+                if request.get("replicated"):
+                    service = request.get("service")
+                    data = request.get("data", {})
+                    
+                    # Atualizar relógio lógico
+                    if "clock" in data:
+                        relogio.update(data["clock"])
+                    
+                    # Processar dados replicados
+                    if service == "login":
+                        user = data.get("user")
+                        timestamp = data.get("timestamp")
+                        
+                        # Adicionar usuário se não existir
+                        if not any(u.get("user") == user for u in usuarios):
+                            usuarios.append({"user": user, "timestamp": timestamp})
+                            salvar_usuarios(usuarios)
+                            print(f"[S] Replicação: usuário '{user}' adicionado", flush=True)
+                    
+                    elif service == "channel":
+                        channel = data.get("channel")
+                        timestamp = data.get("timestamp")
+                        
+                        # Adicionar canal se não existir
+                        if not any(c.get("channel") == channel for c in canais):
+                            canais.append({"channel": channel, "timestamp": timestamp})
+                            salvar_canais(canais)
+                            print(f"[S] Replicação: canal '{channel}' adicionado", flush=True)
+                    
+                    elif service == "publish":
+                        # Salvar publicação
+                        user = data.get("user")
+                        channel = data.get("channel")
+                        message = data.get("message")
+                        timestamp = data.get("timestamp")
+                        salvar_publicacao({
+                            "user": user,
+                            "channel": channel,
+                            "message": message,
+                            "timestamp": timestamp
+                        })
+                        print(f"[S] Replicação: publicação no canal '{channel}' salva", flush=True)
+                    
+                    elif service == "message":
+                        # Salvar mensagem privada
+                        src = data.get("src")
+                        dst = data.get("dst")
+                        message = data.get("message")
+                        timestamp = data.get("timestamp")
+                        salvar_mensagem_privada({
+                            "src": src,
+                            "dst": dst,
+                            "message": message,
+                            "timestamp": timestamp
+                        })
+                        print(f"[S] Replicação: mensagem de '{src}' para '{dst}' salva", flush=True)
+                    
+                    # Enviar ACK
+                    ack = {
+                        "status": "OK",
+                        "clock": relogio.tick()
+                    }
+                    replication_socket.send(msgpack.packb(ack))
+                else:
+                    # Mensagem sem marcador de replicação, ignorar
+                    ack = {"status": "ignored"}
+                    replication_socket.send(msgpack.packb(ack))
             
             except:
                 pass
