@@ -1,0 +1,23 @@
+FROM alpine:3.21
+
+WORKDIR /app
+
+# Instalar dependências de compilação e runtime
+RUN apk add --no-cache \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    musl-dev \
+    zeromq-dev \
+    msgpack-c-dev
+
+# Copiar código fonte
+COPY ../cliente.c .
+
+# Compilar
+RUN gcc -o cliente cliente.c -lzmq -lmsgpackc -I/usr/include -L/usr/lib
+
+# Executar
+CMD ["./cliente"]
+

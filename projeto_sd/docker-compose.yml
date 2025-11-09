@@ -88,17 +88,33 @@ services:
     deploy:
       replicas: 1
 
-  #cliente_automatico:
-  #  build:
-  #    context: .
-  #    dockerfile: ./DockerFiles/Dockerfile_cliente_automatico
-  #  depends_on:
-  #    - servidor
-  #    - broker
-  #  volumes:
-  #    - ./cliente_automatico.py:/app/cliente_automatico.py
-  #  deploy:
-  #    replicas: 2
+  cliente_c:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_cliente_c
+    container_name: cliente_c
+    stdin_open: true
+    tty: true
+    depends_on:
+      - servidor
+    volumes:
+      - ./cliente.c:/app/cliente.c
+    deploy:
+      replicas: 1
+    profiles:
+      - c-client
+
+  cliente_automatico:
+    build:
+      context: .
+      dockerfile: ./DockerFiles/Dockerfile_cliente_automatico
+    depends_on:
+      - servidor
+      - broker
+    volumes:
+      - ./cliente_automatico.py:/app/cliente_automatico.py
+    deploy:
+      replicas: 2
 
 volumes:
   dados_compartilhados:
