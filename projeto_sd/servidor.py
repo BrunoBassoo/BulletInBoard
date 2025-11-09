@@ -146,6 +146,10 @@ def registrar_no_servidor_referencia():
     """Registra o servidor e obtém seu rank"""
     global rank_servidor
     try:
+        # Configurar timeout
+        ref_socket.setsockopt(zmq.RCVTIMEO, 5000)
+        ref_socket.setsockopt(zmq.SNDTIMEO, 5000)
+        
         request = {
             "service": "rank",
             "data": {
@@ -154,6 +158,7 @@ def registrar_no_servidor_referencia():
                 "clock": relogio.tick()
             }
         }
+        print(f"[S] Tentando registrar servidor {NOME_SERVIDOR}...", flush=True)
         ref_socket.send(msgpack.packb(request))
         reply_data = ref_socket.recv()
         reply = msgpack.unpackb(reply_data, raw=False)
@@ -162,9 +167,15 @@ def registrar_no_servidor_referencia():
             relogio.update(reply["data"]["clock"])
         
         rank_servidor = reply.get("data", {}).get("rank")
-        print(f"[S] Servidor {NOME_SERVIDOR} registrado com rank {rank_servidor}", flush=True)
+        print(f"[S] ✅ Servidor {NOME_SERVIDOR} registrado com rank {rank_servidor}", flush=True)
+    except zmq.Again:
+        print(f"[S] ⚠️ Timeout ao registrar. Servidor de referência não disponível.", flush=True)
+        print(f"[S] Continuando sem registro (modo standalone)...", flush=True)
+        rank_servidor = None
     except Exception as e:
-        print(f"[S] Erro ao registrar no servidor de referência: {e}", flush=True)
+        print(f"[S] ❌ Erro ao registrar no servidor de referência: {e}", flush=True)
+        print(f"[S] Continuando sem registro (modo standalone)...", flush=True)
+        rank_servidor = None
 
 def enviar_heartbeat():
     """Envia heartbeat periodicamente ao servidor de referência"""
@@ -376,17 +387,22 @@ def monitor_eleicoes():
             print(f"[S] Erro ao monitorar eleições: {e}", flush=True)
 
 # Registrar no servidor de referência
+print(f"[S] Iniciando servidor {NOME_SERVIDOR}...", flush=True)
 registrar_no_servidor_referencia()
 
-# Iniciar threads de manutenção
-threading.Thread(target=enviar_heartbeat, daemon=True).start()
-threading.Thread(target=sincronizar_relogio, daemon=True).start()
-threading.Thread(target=monitor_eleicoes, daemon=True).start()
-
-# Se for o primeiro servidor (rank 1), se elege como coordenador
-if rank_servidor == 1:
-    coordenador_atual = NOME_SERVIDOR
-    print(f"[S] {NOME_SERVIDOR} é o coordenador inicial", flush=True)
+# Iniciar threads de manutenção apenas se registrado
+if rank_servidor is not None:
+    print(f"[S] Iniciando threads de manutenção...", flush=True)
+    threading.Thread(target=enviar_heartbeat, daemon=True).start()
+    threading.Thread(target=sincronizar_relogio, daemon=True).start()
+    threading.Thread(target=monitor_eleicoes, daemon=True).start()
+    
+    # Se for o primeiro servidor (rank 1), se elege como coordenador
+    if rank_servidor == 1:
+        coordenador_atual = NOME_SERVIDOR
+        print(f"[S] {NOME_SERVIDOR} é o coordenador inicial", flush=True)
+else:
+    print(f"[S] ⚠️ Servidor operando em modo standalone (sem sincronização)", flush=True)
 
 PUB_PORT = 5559  # Porta para publisher
 
@@ -411,31 +427,36 @@ poller = zmq.Poller()
 poller.register(socket, zmq.POLLIN)       # Socket principal (clientes)
 poller.register(sync_socket, zmq.POLLIN)  # Socket de sincronização
 
-print(f"[S] Servidor {NOME_SERVIDOR} pronto para receber mensagens", flush=True)
+print(f"[S] ✅ Servidor {NOME_SERVIDOR} pronto para receber mensagens!", flush=True)
+print(f"[S] Aguardando requisições...", flush=True)
 
 while True:
-    socks = dict(poller.poll())
-    
-    # Mensagens de clientes (através do broker)
-    if socket in socks:
-        # Recebe mensagem serializada com MessagePack
-        request_data = socket.recv()
-        request = msgpack.unpackb(request_data, raw=False)
-        service = request.get("service", request.get("opcao"))  # Suporta ambos por compatibilidade temporária
-        data = request.get("data", request.get("dados"))  # Suporta ambos por compatibilidade temporária
+    try:
+        socks = dict(poller.poll())
         
-        # Salva a mensagem recebida no log
-        salvar_log(f"[{time.time()}] Service: {service} | Data: {data}")
-        
-        # Atualiza relógio lógico ao receber
-        if data and "clock" in data:
-            relogio.update(data["clock"])
-        
-        # Incrementar contador de mensagens
-        contador_mensagens += 1
-        
-        # Processar requisição do cliente
-        match service:
+        # Mensagens de clientes (através do broker)
+        if socket in socks:
+            # Recebe mensagem serializada com MessagePack
+            print(f"[S] 📨 Mensagem recebida do cliente", flush=True)
+            request_data = socket.recv()
+            request = msgpack.unpackb(request_data, raw=False)
+            service = request.get("service", request.get("opcao"))  # Suporta ambos por compatibilidade temporária
+            data = request.get("data", request.get("dados"))  # Suporta ambos por compatibilidade temporária
+            
+            print(f"[S] 🔍 Service: {service} | User: {data.get('user', 'N/A')}", flush=True)
+            
+            # Salva a mensagem recebida no log
+            salvar_log(f"[{time.time()}] Service: {service} | Data: {data}")
+            
+            # Atualiza relógio lógico ao receber
+            if data and "clock" in data:
+                relogio.update(data["clock"])
+            
+            # Incrementar contador de mensagens
+            contador_mensagens += 1
+            
+            # Processar requisição do cliente
+            match service:
             # FEITO
             case "login":
                 user = data.get("user")
@@ -688,7 +709,9 @@ while True:
                 }
 
         # Envia resposta usando MessagePack
+        print(f"[S] 📤 Enviando resposta: {reply.get('service', 'N/A')} - Status: {reply.get('data', {}).get('status', 'N/A')}", flush=True)
         socket.send(msgpack.packb(reply))
+        print(f"[S] ✅ Resposta enviada com sucesso!", flush=True)
     
     # Mensagens de sincronização e eleição (de outros servidores)
     if sync_socket in socks:
@@ -744,3 +767,14 @@ while True:
         
         except Exception as e:
             print(f"[S] Erro ao processar mensagem de sincronização: {e}", flush=True)
+    
+    except KeyboardInterrupt:
+        print(f"\n[S] Servidor {NOME_SERVIDOR} encerrando...", flush=True)
+        break
+    except Exception as e:
+        print(f"[S] ❌ Erro no loop principal: {e}", flush=True)
+        print(f"[S] Tipo: {type(e).__name__}", flush=True)
+        import traceback
+        traceback.print_exc()
+        print(f"[S] Continuando...", flush=True)
+        time.sleep(0.1)
