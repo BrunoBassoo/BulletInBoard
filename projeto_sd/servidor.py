@@ -437,13 +437,10 @@ while True:
         # Mensagens de clientes (através do broker)
         if socket in socks:
             # Recebe mensagem serializada com MessagePack
-            print(f"[S] 📨 Mensagem recebida do cliente", flush=True)
             request_data = socket.recv()
             request = msgpack.unpackb(request_data, raw=False)
             service = request.get("service", request.get("opcao"))  # Suporta ambos por compatibilidade temporária
             data = request.get("data", request.get("dados"))  # Suporta ambos por compatibilidade temporária
-            
-            print(f"[S] 🔍 Service: {service} | User: {data.get('user', 'N/A')}", flush=True)
             
             # Salva a mensagem recebida no log
             salvar_log(f"[{time.time()}] Service: {service} | Data: {data}")
@@ -709,9 +706,7 @@ while True:
                     }
 
             # Envia resposta usando MessagePack
-            print(f"[S] 📤 Enviando resposta: {reply.get('service', 'N/A')} - Status: {reply.get('data', {}).get('status', 'N/A')}", flush=True)
             socket.send(msgpack.packb(reply))
-            print(f"[S] ✅ Resposta enviada com sucesso!", flush=True)
         
         # Mensagens de sincronização e eleição (de outros servidores)
         if sync_socket in socks:

@@ -68,10 +68,7 @@ while True:
                     }
                 }
                 
-                print(f"[DEBUG] Enviando requisição de login...", flush=True)
                 socket.send(msgpack.packb(request))
-                
-                print(f"[DEBUG] Aguardando resposta...", flush=True)
                 reply_data = socket.recv()
                 reply = msgpack.unpackb(reply_data, raw=False)
                 

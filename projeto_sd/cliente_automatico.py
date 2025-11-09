@@ -3,6 +3,7 @@ from datetime import datetime
 import msgpack
 import random
 import time
+import os
 
 # Classe do relógio lógico
 class RelogioLogico:
@@ -23,12 +24,14 @@ context = zmq.Context()
 socket = context.socket(zmq.REQ)
 socket.connect("tcp://broker:5555")
 
-# Gerar nome de usuário aleatório
-usuario = f"bot_{random.randint(1000, 9999)}"
-print(f"[BOT] Iniciando cliente automático com usuário: {usuario}", flush=True)
+# Gerar nome de usuário - prioriza variável de ambiente
+usuario = os.environ.get("CLIENT_NAME")
+if not usuario:
+    usuario = f"bot_{random.randint(1000, 9999)}"
+
+print(f"[{usuario}] Iniciando cliente automático... (clock: {relogio.get()})", flush=True)
 
 # Fazer login
-print(f"[BOT] Fazendo login com usuário: {usuario}", flush=True)
 request = {
     "service": "login",
     "data": {
@@ -42,31 +45,46 @@ reply_data = socket.recv()
 reply = msgpack.unpackb(reply_data, raw=False)
 if "data" in reply and "clock" in reply["data"]:
     relogio.update(reply["data"]["clock"])
-print(f"[BOT] Resposta do login: {reply}", flush=True)
 
-# Aguardar um pouco para garantir que o servidor está pronto
-time.sleep(2)
+print(f"[{usuario}] Login realizado (clock: {relogio.get()})", flush=True)
+
+# Listar canais iniciais
+request = {
+    "service": "channels",
+    "data": {
+        "timestamp": datetime.now().timestamp(),
+        "clock": relogio.tick()
+    }
+}
+socket.send(msgpack.packb(request))
+reply_data = socket.recv()
+reply = msgpack.unpackb(reply_data, raw=False)
+if "data" in reply and "clock" in reply["data"]:
+    relogio.update(reply["data"]["clock"])
+
+print(f"[{usuario}] Canais listados (clock: {relogio.get()})", flush=True)
 
 # Mensagens pré-definidas que o bot pode enviar
 mensagens_disponiveis = [
-    "Olá pessoal! 👋",
-    "Como vocês estão?",
-    "Alguém aí?",
-    "Essa mensagem foi enviada automaticamente",
-    "Teste de mensagem automática",
-    "Bot funcionando perfeitamente! 🤖",
-    "Enviando mensagem número {}",
-    "Espero que estejam bem!",
-    "Saudações do bot automático",
-    "Mensagem teste {}"
+    "Olá a todos!",
+    "Mensagem automática.",
+    "Testando o canal.",
+    "Mensagem de exemplo.",
+    "Pub/Sub funcionando.",
+    "Mais uma mensagem.",
+    "Python é legal.",
+    "Distribuído é melhor.",
+    "ZeroMQ test.",
+    "Fim das mensagens."
 ]
 
+# Canais padrão (fallback caso não existam canais)
+canais_padrao = ["geral", "noticias"]
+
 # Loop infinito
-contador = 0
 while True:
     try:
         # Obter lista de canais disponíveis
-        print(f"\n[BOT] Solicitando lista de canais...", flush=True)
         request = {
             "service": "channels",
             "data": {
@@ -81,25 +99,17 @@ while True:
             relogio.update(reply["data"]["clock"])
         
         canais = reply.get("data", {}).get("channels", [])
-        print(f"[BOT] Canais disponíveis: {canais}", flush=True)
         
+        # Se não há canais cadastrados, usar canais padrão
         if not canais:
-            print("[BOT] Nenhum canal disponível. Aguardando 5 segundos...", flush=True)
-            time.sleep(5)
-            continue
+            canais = canais_padrao
         
         # Escolher um canal aleatório
         canal_escolhido = random.choice(canais)
-        print(f"[BOT] Canal escolhido: {canal_escolhido}", flush=True)
         
-        # Enviar 10 mensagens
+        # Enviar 10 mensagens no canal escolhido
         for i in range(10):
-            # Escolher uma mensagem aleatória
             mensagem = random.choice(mensagens_disponiveis)
-            if "{}" in mensagem:
-                mensagem = mensagem.format(contador + 1)
-            
-            print(f"[BOT] Enviando mensagem {i+1}/10 para o canal '{canal_escolhido}': {mensagem}", flush=True)
             
             request = {
                 "service": "publish",
@@ -117,23 +127,29 @@ while True:
             if "data" in reply and "clock" in reply["data"]:
                 relogio.update(reply["data"]["clock"])
             
-            status = reply.get("data", {}).get("status")
-            if status == "OK":
-                print(f"[BOT] ✅ Mensagem {i+1} enviada com sucesso!", flush=True)
-            else:
-                erro = reply.get("data", {}).get("message", "Erro desconhecido")
-                print(f"[BOT] ❌ Erro ao enviar mensagem {i+1}: {erro}", flush=True)
+            print(f"[{usuario}] Publicou no canal '{canal_escolhido}': {mensagem} (clock: {relogio.get()})", flush=True)
             
-            contador += 1
-            
-            # Pequeno delay entre mensagens
-            time.sleep(1)
+            # Delay de 0.5 segundos entre mensagens
+            time.sleep(0.5)
         
-        # Aguardar antes de começar novo ciclo
-        print(f"[BOT] Aguardando 3 segundos antes do próximo ciclo...", flush=True)
-        time.sleep(3)
+        # Atualizar lista de canais
+        request = {
+            "service": "channels",
+            "data": {
+                "timestamp": datetime.now().timestamp(),
+                "clock": relogio.tick()
+            }
+        }
+        socket.send(msgpack.packb(request))
+        reply_data = socket.recv()
+        reply = msgpack.unpackb(reply_data, raw=False)
+        if "data" in reply and "clock" in reply["data"]:
+            relogio.update(reply["data"]["clock"])
+        
+        # Aguardar 2 segundos antes do próximo ciclo
+        time.sleep(2)
         
     except Exception as e:
-        print(f"[BOT] Erro no loop: {e}", flush=True)
+        print(f"[{usuario}] Erro no loop: {e}", flush=True)
         time.sleep(5)
 
