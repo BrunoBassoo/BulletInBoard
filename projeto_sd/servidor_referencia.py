@@ -50,11 +50,32 @@ def limpar_servidores_inativos():
 # Iniciar thread de limpeza
 threading.Thread(target=limpar_servidores_inativos, daemon=True).start()
 
+def atribuir_rank(nome_servidor):
+    """Atribui rank a um servidor"""
+    global proximo_rank
+    
+    with lock:
+        if nome_servidor not in servidores:
+            rank = proximo_rank
+            proximo_rank += 1
+            servidores[nome_servidor] = {
+                "rank": rank,
+                "last_heartbeat": time.time()
+            }
+            print(f"[REF] Novo servidor cadastrado: {nome_servidor} com rank {rank}", flush=True)
+        else:
+            rank = servidores[nome_servidor]["rank"]
+            servidores[nome_servidor]["last_heartbeat"] = time.time()
+            print(f"[REF] Servidor existente: {nome_servidor} com rank {rank}", flush=True)
+    
+    return rank
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.bind("tcp://*:5560")
 
 print("[REF] Servidor de Referência iniciado na porta 5560", flush=True)
+print("[REF] Aguardando conexões...", flush=True)
 
 while True:
     try:
@@ -69,26 +90,12 @@ while True:
         if "clock" in data:
             relogio.update(data["clock"])
         
-        print(f"[REF] Requisição recebida: {service} | Data: {data}", flush=True)
+        print(f"[REF] Requisição: {service}", flush=True)
         
         if service == "rank":
             # Atribuir rank ao servidor
             nome_servidor = data.get("user")
-            
-            with lock:
-                if nome_servidor not in servidores:
-                    global proximo_rank
-                    rank = proximo_rank
-                    proximo_rank += 1
-                    servidores[nome_servidor] = {
-                        "rank": rank,
-                        "last_heartbeat": time.time()
-                    }
-                    print(f"[REF] Novo servidor cadastrado: {nome_servidor} com rank {rank}", flush=True)
-                else:
-                    rank = servidores[nome_servidor]["rank"]
-                    servidores[nome_servidor]["last_heartbeat"] = time.time()
-                    print(f"[REF] Servidor existente: {nome_servidor} com rank {rank}", flush=True)
+            rank = atribuir_rank(nome_servidor)
             
             reply = {
                 "service": "rank",

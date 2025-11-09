@@ -111,9 +111,18 @@ def replicar_para_outros_servidores(mensagem):
     """Replica dados para todos os outros servidores ativos"""
     def enviar_replicacao():
         try:
+            # Marcar como replicação para evitar loop infinito
+            mensagem_copy = mensagem.copy()
+            mensagem_copy["replicated"] = True
+            
+            service = mensagem.get("service")
+            print(f"[S] Iniciando replicação de {service}...", flush=True)
+            
             # Obter lista de servidores
             lista_servidores = obter_lista_servidores()
+            print(f"[S] Servidores para replicar: {[s['name'] for s in lista_servidores if s['name'] != NOME_SERVIDOR]}", flush=True)
             
+            replicacoes_ok = 0
             # Enviar para cada servidor (exceto este)
             for servidor in lista_servidores:
                 nome_servidor = servidor.get("name")
@@ -129,18 +138,19 @@ def replicar_para_outros_servidores(mensagem):
                     sock.setsockopt(zmq.RCVTIMEO, 2000)
                     sock.setsockopt(zmq.SNDTIMEO, 2000)
                     
-                    # Marcar como replicação para evitar loop infinito
-                    mensagem["replicated"] = True
+                    sock.send(msgpack.packb(mensagem_copy))
+                    ack = sock.recv()  # Aguardar ACK
                     
-                    sock.send(msgpack.packb(mensagem))
-                    sock.recv()  # Aguardar ACK
+                    replicacoes_ok += 1
                     
                     sock.close()
                     ctx.term()
                 except:
                     pass  # Falha silenciosa
-        except:
-            pass
+            
+            print(f"[S] Replicação de {service} concluída: {replicacoes_ok} servidores", flush=True)
+        except Exception as e:
+            print(f"[S] Erro na replicação: {e}", flush=True)
     
     # Executar em thread separada para não bloquear
     threading.Thread(target=enviar_replicacao, daemon=True).start()
@@ -412,6 +422,11 @@ def monitor_eleicoes():
                         relogio.update(msg["data"]["clock"])
         except:
             pass
+
+# Aguardar servidor de referência estar pronto
+print(f"[S] Nome do servidor: {NOME_SERVIDOR}", flush=True)
+print(f"[S] Aguardando servidor de referência...", flush=True)
+time.sleep(3)
 
 # Registrar no servidor de referência
 registrar_no_servidor_referencia()
@@ -811,6 +826,8 @@ while True:
                 request_data = replication_socket.recv()
                 request = msgpack.unpackb(request_data, raw=False)
                 
+                print(f"[S] Mensagem recebida na porta de replicação", flush=True)
+                
                 # Verificar se é uma replicação (para evitar loop infinito)
                 if request.get("replicated"):
                     service = request.get("service")
@@ -825,21 +842,29 @@ while True:
                         user = data.get("user")
                         timestamp = data.get("timestamp")
                         
+                        print(f"[S] Recebeu replicação de usuário: {user}", flush=True)
+                        
                         # Adicionar usuário se não existir
                         if not any(u.get("user") == user for u in usuarios):
                             usuarios.append({"user": user, "timestamp": timestamp})
                             salvar_usuarios(usuarios)
                             print(f"[S] Replicação: usuário '{user}' adicionado", flush=True)
+                        else:
+                            print(f"[S] Replicação: usuário '{user}' já existe", flush=True)
                     
                     elif service == "channel":
-                        channel = data.get("channel")
+                        channel = data.get("channel", data.get("canal"))
                         timestamp = data.get("timestamp")
+                        
+                        print(f"[S] Recebeu replicação de canal: {channel}", flush=True)
                         
                         # Adicionar canal se não existir
                         if not any(c.get("channel") == channel for c in canais):
                             canais.append({"channel": channel, "timestamp": timestamp})
                             salvar_canais(canais)
                             print(f"[S] Replicação: canal '{channel}' adicionado", flush=True)
+                        else:
+                            print(f"[S] Replicação: canal '{channel}' já existe", flush=True)
                     
                     elif service == "publish":
                         # Salvar publicação
