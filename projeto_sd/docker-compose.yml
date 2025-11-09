@@ -96,7 +96,8 @@ services:
       - servidor
       - broker
     volumes:
-      - ./cliente_automatico.py:/app/cliente_automatico.py
+      - ./cliente_automatico.js:/app/cliente_automatico.js
+      - ./package.json:/app/package.json
     deploy:
       replicas: 2
 
