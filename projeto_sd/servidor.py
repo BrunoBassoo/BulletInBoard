@@ -481,9 +481,12 @@ while True:
                     lista_usuarios = [u.get("user") for u in usuarios]
                     
                     # Exibir cada usuário
-                    print(f"[S] Listando usuários cadastrados:", flush=True)
-                    for i, usuario in enumerate(usuarios):
-                        print(f"    Usuario {i}: {usuario.get('user')} | timestamp: {usuario.get('timestamp')}", flush=True)
+                    if usuarios:
+                        print(f"[S] Listando {len(usuarios)} usuários cadastrados:", flush=True)
+                        for i, usuario in enumerate(usuarios):
+                            print(f"    Usuario {i}: {usuario.get('user')} | timestamp: {usuario.get('timestamp')}", flush=True)
+                    else:
+                        print(f"[S] Nenhum usuário cadastrado ainda.", flush=True)
                     
                     reply = {
                         "service": "users",
@@ -539,9 +542,12 @@ while True:
                     lista_canais = [c.get("channel") for c in canais]
                     
                     # Exibir cada canal
-                    print(f"[S] Listando canais cadastrados:", flush=True)
-                    for i, canal in enumerate(canais):
-                        print(f"    Canal {i}: {canal.get('channel')} | timestamp: {canal.get('timestamp')}", flush=True)
+                    if canais:
+                        print(f"[S] Listando {len(canais)} canais cadastrados:", flush=True)
+                        for i, canal in enumerate(canais):
+                            print(f"    Canal {i}: {canal.get('channel')} | timestamp: {canal.get('timestamp')}", flush=True)
+                    else:
+                        print(f"[S] Nenhum canal cadastrado ainda.", flush=True)
                     
                     reply = {
                         "service": "channels",

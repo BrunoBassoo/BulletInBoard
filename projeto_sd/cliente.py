@@ -104,11 +104,13 @@ while True:
                 
                 print(f"\n📋 Usuários cadastrados:", flush=True)
                 users = reply.get('data', {}).get('users', [])
+                print(f"Total de usuários: {len(users)}", flush=True)
                 if users:
                     for i, user in enumerate(users, 1):
                         print(f"   {i}. {user}", flush=True)
                 else:
                     print(f"   Nenhum usuário cadastrado ainda.", flush=True)
+                    print(f"   Dica: Use a opção 1 para fazer login primeiro!", flush=True)
             
             
 
@@ -159,11 +161,13 @@ while True:
                 
                 print(f"\n📢 Canais disponíveis:", flush=True)
                 channels = reply.get('data', {}).get('channels', [])
+                print(f"Total de canais: {len(channels)}", flush=True)
                 if channels:
                     for i, channel in enumerate(channels, 1):
                         print(f"   {i}. #{channel}", flush=True)
                 else:
                     print(f"   Nenhum canal cadastrado ainda.", flush=True)
+                    print(f"   Dica: Use a opção 3 para cadastrar um canal!", flush=True)
         
             
         
