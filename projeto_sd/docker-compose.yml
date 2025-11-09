@@ -84,25 +84,9 @@ services:
     depends_on:
       - servidor
     volumes:
-      - ./cliente.py:/app/cliente.py
-    deploy:
-      replicas: 1
-
-  cliente_c:
-    build:
-      context: .
-      dockerfile: ./DockerFiles/Dockerfile_cliente_c
-    container_name: cliente_c
-    stdin_open: true
-    tty: true
-    depends_on:
-      - servidor
-    volumes:
       - ./cliente.c:/app/cliente.c
     deploy:
       replicas: 1
-    profiles:
-      - c-client
 
   cliente_automatico:
     build:
