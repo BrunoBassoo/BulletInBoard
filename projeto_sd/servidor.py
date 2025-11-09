@@ -480,6 +480,11 @@ while True:
                     # Extrair apenas os nomes dos usuários
                     lista_usuarios = [u.get("user") for u in usuarios]
                     
+                    # Exibir cada usuário
+                    print(f"[S] Listando usuários cadastrados:", flush=True)
+                    for i, usuario in enumerate(usuarios):
+                        print(f"    Usuario {i}: {usuario.get('user')} | timestamp: {usuario.get('timestamp')}", flush=True)
+                    
                     reply = {
                         "service": "users",
                         "data": {
@@ -488,7 +493,6 @@ while True:
                             "clock": relogio.tick()
                         }
                     }
-                    print(f"[S] - Usuários listados: {lista_usuarios}", flush=True)
             
                 # FEITO
                 case "channel" | "cadastrarCanal":  # Suporta ambos por compatibilidade
@@ -534,6 +538,11 @@ while True:
                     # Extrair apenas os nomes dos canais
                     lista_canais = [c.get("channel") for c in canais]
                     
+                    # Exibir cada canal
+                    print(f"[S] Listando canais cadastrados:", flush=True)
+                    for i, canal in enumerate(canais):
+                        print(f"    Canal {i}: {canal.get('channel')} | timestamp: {canal.get('timestamp')}", flush=True)
+                    
                     reply = {
                         "service": "channels",
                         "data": {
@@ -542,7 +551,6 @@ while True:
                             "clock": relogio.tick()
                         }
                     }
-                    print(f"[S] - Canais listados: {lista_canais}", flush=True)
 
                 # FEITO
                 case "publish":
