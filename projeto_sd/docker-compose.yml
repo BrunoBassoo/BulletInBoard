@@ -86,17 +86,17 @@ services:
     deploy:
       replicas: 1
 
-  cliente_automatico:
-    build:
-      context: .
-      dockerfile: ./DockerFiles/Dockerfile_cliente_automatico
-    depends_on:
-      - servidor
-      - broker
-    volumes:
-      - ./cliente_automatico.py:/app/cliente_automatico.py
-    deploy:
-      replicas: 2
+  #cliente_automatico:
+  #  build:
+  #    context: .
+  #    dockerfile: ./DockerFiles/Dockerfile_cliente_automatico
+  #  depends_on:
+  #    - servidor
+  #    - broker
+  #  volumes:
+  #    - ./cliente_automatico.py:/app/cliente_automatico.py
+  #  deploy:
+  #    replicas: 2
 
 volumes:
   dados_compartilhados:
