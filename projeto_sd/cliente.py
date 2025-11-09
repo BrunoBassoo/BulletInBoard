@@ -48,7 +48,7 @@ while True:
         match opcao:
 
             case "1":
-                user = input("Usuario: ")
+                user = input("Entre com seu usuario: ")
                 
                 request = {
                     "service": "login",
@@ -93,7 +93,7 @@ while True:
                     print(f"  {user}", flush=True)
 
             case "3":
-                canal = input("Canal: ")
+                canal = input("Entre com o canal: ")
                 
                 request = {
                     "service": "channel",
@@ -137,9 +137,9 @@ while True:
                     print(f"  {channel}", flush=True)
 
             case "5":
-                usuario = input("Usuario: ")
-                canal = input("Canal: ")
-                mensagem = input("Mensagem: ")
+                usuario = input("Entre com seu usuario: ")
+                canal = input("Entre com o canal: ")
+                mensagem = input("Entre com a mensagem: ")
 
                 request = {
                     "service": "publish",
@@ -165,9 +165,9 @@ while True:
                     print(f"Publicado", flush=True)
 
             case "6":
-                src = input("De (usuario): ")
-                dst = input("Para (usuario): ")
-                mensagem = input("Mensagem: ")
+                src = input("Entre com seu usuario (de): ")
+                dst = input("Entre com o destinatario (para): ")
+                mensagem = input("Entre com a mensagem: ")
 
                 request = {
                     "service": "message",
