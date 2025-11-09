@@ -146,7 +146,6 @@ def registrar_no_servidor_referencia():
     """Registra o servidor e obtém seu rank"""
     global rank_servidor
     try:
-        # Configurar timeout
         ref_socket.setsockopt(zmq.RCVTIMEO, 5000)
         ref_socket.setsockopt(zmq.SNDTIMEO, 5000)
         
@@ -158,7 +157,6 @@ def registrar_no_servidor_referencia():
                 "clock": relogio.tick()
             }
         }
-        print(f"[S] Tentando registrar servidor {NOME_SERVIDOR}...", flush=True)
         ref_socket.send(msgpack.packb(request))
         reply_data = ref_socket.recv()
         reply = msgpack.unpackb(reply_data, raw=False)
@@ -167,14 +165,8 @@ def registrar_no_servidor_referencia():
             relogio.update(reply["data"]["clock"])
         
         rank_servidor = reply.get("data", {}).get("rank")
-        print(f"[S] ✅ Servidor {NOME_SERVIDOR} registrado com rank {rank_servidor}", flush=True)
-    except zmq.Again:
-        print(f"[S] ⚠️ Timeout ao registrar. Servidor de referência não disponível.", flush=True)
-        print(f"[S] Continuando sem registro (modo standalone)...", flush=True)
-        rank_servidor = None
-    except Exception as e:
-        print(f"[S] ❌ Erro ao registrar no servidor de referência: {e}", flush=True)
-        print(f"[S] Continuando sem registro (modo standalone)...", flush=True)
+        print(f"[S] Servidor {NOME_SERVIDOR} registrado com rank {rank_servidor}", flush=True)
+    except:
         rank_servidor = None
 
 def enviar_heartbeat():
@@ -201,12 +193,10 @@ def enviar_heartbeat():
             if "data" in reply and "clock" in reply["data"]:
                 relogio.update(reply["data"]["clock"])
             
-            print(f"[S] Heartbeat enviado por {NOME_SERVIDOR}", flush=True)
-            
             sock.close()
             ctx.term()
-        except Exception as e:
-            print(f"[S] Erro ao enviar heartbeat: {e}", flush=True)
+        except:
+            pass
 
 def obter_lista_servidores():
     """Obtém a lista de servidores do servidor de referência"""
@@ -235,8 +225,7 @@ def obter_lista_servidores():
         ctx.term()
         
         return lista
-    except Exception as e:
-        print(f"[S] Erro ao obter lista de servidores: {e}", flush=True)
+    except:
         return []
 
 def sincronizar_relogio():
@@ -263,11 +252,10 @@ def sincronizar_relogio():
                         break
                 
                 if not endereco_coord:
-                    print(f"[S] Coordenador {coordenador_atual} não encontrado", flush=True)
                     continue
                 
                 sock.connect(endereco_coord)
-                sock.setsockopt(zmq.RCVTIMEO, 5000)  # Timeout de 5 segundos
+                sock.setsockopt(zmq.RCVTIMEO, 5000)
                 
                 t1 = time.time()
                 request = {
@@ -300,11 +288,10 @@ def sincronizar_relogio():
                 ctx.term()
                 
             except zmq.Again:
-                print(f"[S] Timeout ao sincronizar com coordenador {coordenador_atual}", flush=True)
-                # Iniciar eleição
+                # Iniciar eleição silenciosamente
                 iniciar_eleicao()
-            except Exception as e:
-                print(f"[S] Erro ao sincronizar relógio: {e}", flush=True)
+            except:
+                pass
 
 def iniciar_eleicao():
     """Inicia o processo de eleição (Bully Algorithm)"""
@@ -383,16 +370,14 @@ def monitor_eleicoes():
                     
                     if "clock" in msg.get("data", {}):
                         relogio.update(msg["data"]["clock"])
-        except Exception as e:
-            print(f"[S] Erro ao monitorar eleições: {e}", flush=True)
+        except:
+            pass
 
 # Registrar no servidor de referência
-print(f"[S] Iniciando servidor {NOME_SERVIDOR}...", flush=True)
 registrar_no_servidor_referencia()
 
 # Iniciar threads de manutenção apenas se registrado
 if rank_servidor is not None:
-    print(f"[S] Iniciando threads de manutenção...", flush=True)
     threading.Thread(target=enviar_heartbeat, daemon=True).start()
     threading.Thread(target=sincronizar_relogio, daemon=True).start()
     threading.Thread(target=monitor_eleicoes, daemon=True).start()
@@ -401,8 +386,6 @@ if rank_servidor is not None:
     if rank_servidor == 1:
         coordenador_atual = NOME_SERVIDOR
         print(f"[S] {NOME_SERVIDOR} é o coordenador inicial", flush=True)
-else:
-    print(f"[S] ⚠️ Servidor operando em modo standalone (sem sincronização)", flush=True)
 
 PUB_PORT = 5559  # Porta para publisher
 
@@ -427,8 +410,7 @@ poller = zmq.Poller()
 poller.register(socket, zmq.POLLIN)       # Socket principal (clientes)
 poller.register(sync_socket, zmq.POLLIN)  # Socket de sincronização
 
-print(f"[S] ✅ Servidor {NOME_SERVIDOR} pronto para receber mensagens!", flush=True)
-print(f"[S] Aguardando requisições...", flush=True)
+print(f"[S] Servidor {NOME_SERVIDOR} pronto!", flush=True)
 
 while True:
     try:
@@ -760,16 +742,12 @@ while True:
                 
                 sync_socket.send(msgpack.packb(reply))
             
-            except Exception as e:
-                print(f"[S] Erro ao processar mensagem de sincronização: {e}", flush=True)
+            except:
+                pass
     
     except KeyboardInterrupt:
         print(f"\n[S] Servidor {NOME_SERVIDOR} encerrando...", flush=True)
         break
     except Exception as e:
-        print(f"[S] ❌ Erro no loop principal: {e}", flush=True)
-        print(f"[S] Tipo: {type(e).__name__}", flush=True)
-        import traceback
-        traceback.print_exc()
-        print(f"[S] Continuando...", flush=True)
+        print(f"[S] Erro: {e}", flush=True)
         time.sleep(0.1)

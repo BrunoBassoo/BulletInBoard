@@ -22,9 +22,8 @@ context = zmq.Context()
 socket = context.socket(zmq.REQ)
 socket.connect("tcp://broker:5555")
 
-# Configurar timeout para evitar travamento
-socket.setsockopt(zmq.RCVTIMEO, 10000)  # 10 segundos timeout
-socket.setsockopt(zmq.SNDTIMEO, 10000)  # 10 segundos timeout
+socket.setsockopt(zmq.RCVTIMEO, 10000)
+socket.setsockopt(zmq.SNDTIMEO, 10000)
 
 print("="*50, flush=True)
 print("Bem-vindo ao BulletInBoard!", flush=True)
@@ -234,33 +233,23 @@ while True:
                 print(f"\n❌ Opção '{opcao}' inválida! Por favor, escolha uma opção válida (0-6).", flush=True)
     
     except zmq.Again:
-        print(f"\n⏱️  Timeout! O servidor não respondeu a tempo. Tente novamente.", flush=True)
-        # Recriar socket após timeout
+        # Recriar socket
         socket.close()
         socket = context.socket(zmq.REQ)
         socket.connect("tcp://broker:5555")
         socket.setsockopt(zmq.RCVTIMEO, 10000)
         socket.setsockopt(zmq.SNDTIMEO, 10000)
-    except zmq.ZMQError as e:
-        print(f"\n❌ Erro de comunicação: {e}", flush=True)
-        print(f"   Tentando reconectar...", flush=True)
+    except zmq.ZMQError:
         try:
             socket.close()
             socket = context.socket(zmq.REQ)
             socket.connect("tcp://broker:5555")
             socket.setsockopt(zmq.RCVTIMEO, 10000)
             socket.setsockopt(zmq.SNDTIMEO, 10000)
-            print(f"   ✅ Reconectado com sucesso!", flush=True)
-        except Exception as reconnect_error:
-            print(f"   ❌ Falha ao reconectar: {reconnect_error}", flush=True)
-            print(f"   Encerrando...", flush=True)
+        except:
             break
     except Exception as e:
-        print(f"\n❌ Erro inesperado: {e}", flush=True)
-        print(f"   Tipo: {type(e).__name__}", flush=True)
-        import traceback
-        traceback.print_exc()
-        print(f"   Continuando...", flush=True)
+        print(f"\n❌ Erro: {e}", flush=True)
 
 print("\n" + "="*50, flush=True)
 print("Obrigado por usar o BulletInBoard!", flush=True)
