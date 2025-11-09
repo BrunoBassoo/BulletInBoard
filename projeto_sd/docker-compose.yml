@@ -77,7 +77,7 @@ services:
   cliente:
     build:
       context: .
-      dockerfile: ./DockerFiles/Dockerfile_cliente_c
+      dockerfile: ./DockerFiles/Dockerfile_cliente
     container_name: cliente
     stdin_open: true
     tty: true

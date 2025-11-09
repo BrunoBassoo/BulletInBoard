@@ -430,7 +430,18 @@ while True:
         
         if socket in socks:
             request_data = socket.recv()
-            request = msgpack.unpackb(request_data, raw=False)
+            
+            # Detectar formato: MessagePack ou JSON
+            formato_json = False
+            try:
+                request = msgpack.unpackb(request_data, raw=False)
+            except:
+                try:
+                    request = json.loads(request_data.decode('utf-8'))
+                    formato_json = True
+                except:
+                    continue
+            
             service = request.get("service", request.get("opcao"))
             data = request.get("data", request.get("dados"))
             
@@ -627,7 +638,11 @@ while True:
                         }
                     }
 
-            socket.send(msgpack.packb(reply))
+            # Responder no mesmo formato que recebeu
+            if formato_json:
+                socket.send(json.dumps(reply).encode('utf-8'))
+            else:
+                socket.send(msgpack.packb(reply))
         
         if sync_socket in socks:
             try:
