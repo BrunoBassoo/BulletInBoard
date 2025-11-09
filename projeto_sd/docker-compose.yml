@@ -33,7 +33,7 @@ services:
       - ./publisher.py:/app/publisher.py
     deploy:
       replicas: 1
-fix:
+
   subscriber:
     build:
       context: .
