@@ -5,6 +5,10 @@ import time
 import json
 import os
 
+# Diretório para persistência de dados
+DATA_DIR = "/app/dados"
+os.makedirs(DATA_DIR, exist_ok=True)
+
 # Lista de endereços dos outros servidores (exemplo, ajuste conforme sua rede)
 OUTROS_SERVIDORES = [
     "tcp://servidor2:5556",
@@ -24,71 +28,86 @@ def carregar_dados():
     usuarios = []
     canais = []
     
+    usuarios_path = os.path.join(DATA_DIR, "usuarios.json")
+    canais_path = os.path.join(DATA_DIR, "canais.json")
+    
     # Carregar usuários
-    if os.path.exists("usuarios.json"):
+    if os.path.exists(usuarios_path):
         try:
-            with open("usuarios.json", "r", encoding="utf-8") as f:
+            with open(usuarios_path, "r", encoding="utf-8") as f:
                 usuarios = json.load(f)
-            print(f"[S] - {len(usuarios)} usuários carregados do disco", flush=True)
+            print(f"[S] {len(usuarios)} usuários carregados do disco", flush=True)
         except Exception as e:
-            print(f"[S] - Erro ao carregar usuários: {e}", flush=True)
+            print(f"[S] Erro ao carregar usuários: {e}", flush=True)
+    else:
+        print(f"[S] Arquivo usuarios.json não existe ainda", flush=True)
     
     # Carregar canais
-    if os.path.exists("canais.json"):
+    if os.path.exists(canais_path):
         try:
-            with open("canais.json", "r", encoding="utf-8") as f:
+            with open(canais_path, "r", encoding="utf-8") as f:
                 canais = json.load(f)
-            print(f"[S] - {len(canais)} canais carregados do disco", flush=True)
+            print(f"[S] {len(canais)} canais carregados do disco", flush=True)
         except Exception as e:
-            print(f"[S] - Erro ao carregar canais: {e}", flush=True)
+            print(f"[S] Erro ao carregar canais: {e}", flush=True)
+    else:
+        print(f"[S] Arquivo canais.json não existe ainda", flush=True)
     
     return usuarios, canais
 
 # Função para salvar usuários em disco
 def salvar_usuarios(usuarios):
     try:
-        with open("usuarios.json", "w", encoding="utf-8") as f:
+        usuarios_path = os.path.join(DATA_DIR, "usuarios.json")
+        with open(usuarios_path, "w", encoding="utf-8") as f:
             json.dump(usuarios, f, indent=2, ensure_ascii=False)
+        print(f"[S] ✅ {len(usuarios)} usuários salvos em usuarios.json", flush=True)
     except Exception as e:
-        print(f"[S] - Erro ao salvar usuários: {e}", flush=True)
+        print(f"[S] Erro ao salvar usuários: {e}", flush=True)
 
 # Função para salvar canais em disco
 def salvar_canais(canais):
     try:
-        with open("canais.json", "w", encoding="utf-8") as f:
+        canais_path = os.path.join(DATA_DIR, "canais.json")
+        with open(canais_path, "w", encoding="utf-8") as f:
             json.dump(canais, f, indent=2, ensure_ascii=False)
+        print(f"[S] ✅ {len(canais)} canais salvos em canais.json", flush=True)
     except Exception as e:
-        print(f"[S] - Erro ao salvar canais: {e}", flush=True)
+        print(f"[S] Erro ao salvar canais: {e}", flush=True)
 
 # Função para salvar publicações em disco
 def salvar_publicacao(publicacao):
     try:
+        publicacoes_path = os.path.join(DATA_DIR, "publicacoes.json")
         publicacoes = []
-        if os.path.exists("publicacoes.json"):
-            with open("publicacoes.json", "r", encoding="utf-8") as f:
+        if os.path.exists(publicacoes_path):
+            with open(publicacoes_path, "r", encoding="utf-8") as f:
                 publicacoes = json.load(f)
         
         publicacoes.append(publicacao)
         
-        with open("publicacoes.json", "w", encoding="utf-8") as f:
+        with open(publicacoes_path, "w", encoding="utf-8") as f:
             json.dump(publicacoes, f, indent=2, ensure_ascii=False)
+        print(f"[S] Publicação salva (total: {len(publicacoes)})", flush=True)
     except Exception as e:
-        print(f"[S] - Erro ao salvar publicação: {e}", flush=True)
+        print(f"[S] Erro ao salvar publicação: {e}", flush=True)
 
 # Função para salvar mensagens privadas em disco
 def salvar_mensagem_privada(mensagem):
     try:
+        mensagens_path = os.path.join(DATA_DIR, "mensagens.json")
         mensagens = []
-        if os.path.exists("mensagens.json"):
-            with open("mensagens.json", "r", encoding="utf-8") as f:
+        if os.path.exists(mensagens_path):
+            with open(mensagens_path, "r", encoding="utf-8") as f:
                 mensagens = json.load(f)
         
         mensagens.append(mensagem)
         
-        with open("mensagens.json", "w", encoding="utf-8") as f:
+        with open(mensagens_path, "w", encoding="utf-8") as f:
             json.dump(mensagens, f, indent=2, ensure_ascii=False)
+        print(f"[S] Mensagem privada salva (total: {len(mensagens)})", flush=True)
     except Exception as e:
-        print(f"[S] - Erro ao salvar mensagem: {e}", flush=True)
+        print(f"[S] Erro ao salvar mensagem: {e}", flush=True)
 
 # Função para replicar mensagem para outros servidores
 def replicar_para_outros_servidores(mensagem, lista_enderecos):

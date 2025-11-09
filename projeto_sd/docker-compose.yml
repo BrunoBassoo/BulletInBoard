@@ -60,6 +60,7 @@ services:
       dockerfile: ./DockerFiles/Dockerfile_servidor
     volumes:
       - ./servidor.py:/app/servidor.py
+      - dados_compartilhados:/app/dados  # Volume compartilhado para persistência
     ports:
       - "5561"  # Porta para sincronização entre servidores
     depends_on:
@@ -96,3 +97,6 @@ services:
     deploy:
       replicas: 2
 
+volumes:
+  dados_compartilhados:
+    driver: local
