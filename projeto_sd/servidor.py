@@ -508,9 +508,10 @@ while True:
                         }
                     }
             
-                case "channel" | "cadastrarCanal":
-                    channel = data.get("channel", data.get("canal"))
+                case "channel":
+                    channel = data.get("channel")
                     timestamp = data.get("timestamp")
+                    
                     canal_existe = any(c.get("channel") == channel for c in canais)
                     
                     if canal_existe:
@@ -519,13 +520,18 @@ while True:
                             "data": {
                                 "status": "erro",
                                 "timestamp": time.time(),
-                                "description": "Canal ja existe",
+                                "description": "Canal já cadastrado",
                                 "clock": relogio.tick()
                             }
                         }
+                        print(f"[S] - Tentativa de cadastro com canal existente: {channel}", flush=True)
                     else:
-                        canais.append({"channel": channel, "timestamp": timestamp})
+                        canais.append({
+                            "channel": channel,
+                            "timestamp": timestamp
+                        })
                         salvar_canais(canais)
+                        
                         reply = {
                             "service": "channel",
                             "data": {
@@ -537,7 +543,7 @@ while True:
                         print(f"[S] Canal: {channel}", flush=True)
                         replicar_para_outros_servidores({"service": "channel", "data": data})
 
-                case "channels" | "listarCanal":
+                case "channels":
                     lista_canais = [c.get("channel") for c in canais]
                     print(f"[S] Listando canais: {len(canais)}", flush=True)
                     
@@ -713,9 +719,12 @@ while True:
                             print(f"[S] Replicado usuario: {user}", flush=True)
                     
                     elif service == "channel":
-                        channel = data.get("channel", data.get("canal"))
+                        channel = data.get("channel")
                         if not any(c.get("channel") == channel for c in canais):
-                            canais.append({"channel": channel, "timestamp": data.get("timestamp")})
+                            canais.append({
+                                "channel": channel,
+                                "timestamp": data.get("timestamp")
+                            })
                             salvar_canais(canais)
                             print(f"[S] Replicado canal: {channel}", flush=True)
                     
