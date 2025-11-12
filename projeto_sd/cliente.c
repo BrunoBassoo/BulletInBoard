@@ -80,25 +80,21 @@ int main() {
                 "{\"service\":\"login\",\"data\":{\"user\":\"%s\",\"timestamp\":%ld,\"clock\":%d}}",
                 buffer_input, (long)time(NULL), relogio_tick(&relogio));
             
-            printf("[DEBUG] Enviando: %s\n", message);
-            int sent = zmq_send(socket, message, strlen(message), 0);
-            printf("[DEBUG] Bytes enviados: %d\n", sent);
+            zmq_send(socket, message, strlen(message), 0);
             
             char recv_buf[4096];
             int size = zmq_recv(socket, recv_buf, sizeof(recv_buf), 0);
-            printf("[DEBUG] Bytes recebidos: %d\n", size);
             
             if (size > 0) {
                 recv_buf[size] = '\0';
-                printf("[DEBUG] Recebido: %s\n", recv_buf);
                 
                 if (strstr(recv_buf, "erro") != NULL) {
-                    printf("Erro\n");
+                    printf("Erro: Usuario ja cadastrado\n");
                 } else {
                     printf("Login OK\n");
                 }
             } else {
-                printf("[DEBUG] Erro ao receber (size=%d, errno=%d)\n", size, zmq_errno());
+                printf("Erro ao receber resposta\n");
             }
             fflush(stdout);
             
@@ -107,7 +103,6 @@ int main() {
                 "{\"service\":\"users\",\"data\":{\"timestamp\":%ld,\"clock\":%d}}",
                 (long)time(NULL), relogio_tick(&relogio));
             
-            printf("[DEBUG] Enviando: %s\n", message);
             zmq_send(socket, message, strlen(message), 0);
             
             char recv_buf[4096];
@@ -115,17 +110,36 @@ int main() {
             
             if (size > 0) {
                 recv_buf[size] = '\0';
-                printf("[DEBUG] Recebido: %s\n", recv_buf);
                 
-                // Parse simples da resposta JSON
                 char *users_start = strstr(recv_buf, "\"users\":[");
                 if (users_start) {
-                    printf("Usuarios encontrados na resposta\n");
+                    printf("Usuarios disponiveis:\n");
+                    
+                    char *pos = users_start + 9;
+                    char user_nome[256];
+                    int user_num = 1;
+                    
+                    while (*pos != ']' && *pos != '\0') {
+                        if (*pos == '\"') {
+                            pos++;
+                            int i = 0;
+                            while (*pos != '\"' && *pos != '\0' && i < 255) {
+                                user_nome[i++] = *pos++;
+                            }
+                            user_nome[i] = '\0';
+                            if (i > 0) {
+                                printf("  [%d] %s\n", user_num++, user_nome);
+                            }
+                        }
+                        pos++;
+                    }
+                    
+                    if (user_num == 1) {
+                        printf("  Nenhum usuario cadastrado\n");
+                    }
                 } else {
-                    printf("Lista de usuarios vazia ou erro\n");
+                    printf("Erro ao listar usuarios\n");
                 }
-            } else {
-                printf("[DEBUG] Nenhuma resposta recebida (size=%d)\n", size);
             }
             fflush(stdout);
             
@@ -164,7 +178,36 @@ int main() {
             
             if (size > 0) {
                 recv_buf[size] = '\0';
-                printf("Resposta recebida\n");
+                
+                char *channels_start = strstr(recv_buf, "\"channels\":[");
+                if (channels_start) {
+                    printf("Canais disponiveis:\n");
+                    
+                    char *pos = channels_start + 12;
+                    char canal_nome[256];
+                    int canal_num = 1;
+                    
+                    while (*pos != ']' && *pos != '\0') {
+                        if (*pos == '\"') {
+                            pos++;
+                            int i = 0;
+                            while (*pos != '\"' && *pos != '\0' && i < 255) {
+                                canal_nome[i++] = *pos++;
+                            }
+                            canal_nome[i] = '\0';
+                            if (i > 0) {
+                                printf("  [%d] %s\n", canal_num++, canal_nome);
+                            }
+                        }
+                        pos++;
+                    }
+                    
+                    if (canal_num == 1) {
+                        printf("  Nenhum canal cadastrado\n");
+                    }
+                } else {
+                    printf("Erro ao listar canais\n");
+                }
             }
             fflush(stdout);
             
