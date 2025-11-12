@@ -111,27 +111,41 @@ int main() {
             if (size > 0) {
                 recv_buf[size] = '\0';
                 
-                char *users_start = strstr(recv_buf, "\"users\":[");
+                char *users_start = strstr(recv_buf, "\"users\":");
+                if (!users_start) {
+                    users_start = strstr(recv_buf, "'users':");
+                }
+                
                 if (users_start) {
                     printf("Usuarios disponiveis:\n");
                     
-                    char *pos = users_start + 9;
+                    char *pos = users_start;
+                    while (*pos != '[' && *pos != '\0') pos++;
+                    if (*pos == '[') pos++;
+                    
                     char user_nome[256];
                     int user_num = 1;
                     
                     while (*pos != ']' && *pos != '\0') {
-                        if (*pos == '\"') {
+                        while (*pos == ' ' || *pos == ',') pos++;
+                        
+                        if (*pos == '\"' || *pos == '\'') {
+                            char quote = *pos;
                             pos++;
                             int i = 0;
-                            while (*pos != '\"' && *pos != '\0' && i < 255) {
+                            while (*pos != quote && *pos != '\0' && i < 255) {
                                 user_nome[i++] = *pos++;
                             }
                             user_nome[i] = '\0';
                             if (i > 0) {
                                 printf("  [%d] %s\n", user_num++, user_nome);
                             }
+                            if (*pos == quote) pos++;
+                        } else if (*pos == ']') {
+                            break;
+                        } else {
+                            pos++;
                         }
-                        pos++;
                     }
                     
                     if (user_num == 1) {
@@ -179,27 +193,41 @@ int main() {
             if (size > 0) {
                 recv_buf[size] = '\0';
                 
-                char *channels_start = strstr(recv_buf, "\"channels\":[");
+                char *channels_start = strstr(recv_buf, "\"channels\":");
+                if (!channels_start) {
+                    channels_start = strstr(recv_buf, "'channels':");
+                }
+                
                 if (channels_start) {
                     printf("Canais disponiveis:\n");
                     
-                    char *pos = channels_start + 12;
+                    char *pos = channels_start;
+                    while (*pos != '[' && *pos != '\0') pos++;
+                    if (*pos == '[') pos++;
+                    
                     char canal_nome[256];
                     int canal_num = 1;
                     
                     while (*pos != ']' && *pos != '\0') {
-                        if (*pos == '\"') {
+                        while (*pos == ' ' || *pos == ',') pos++;
+                        
+                        if (*pos == '\"' || *pos == '\'') {
+                            char quote = *pos;
                             pos++;
                             int i = 0;
-                            while (*pos != '\"' && *pos != '\0' && i < 255) {
+                            while (*pos != quote && *pos != '\0' && i < 255) {
                                 canal_nome[i++] = *pos++;
                             }
                             canal_nome[i] = '\0';
                             if (i > 0) {
                                 printf("  [%d] %s\n", canal_num++, canal_nome);
                             }
+                            if (*pos == quote) pos++;
+                        } else if (*pos == ']') {
+                            break;
+                        } else {
+                            pos++;
                         }
-                        pos++;
                     }
                     
                     if (canal_num == 1) {
