@@ -101,6 +101,11 @@ Executa ciclo contínuo com 5 operações:
 
 ## Como Executar
 
+### Entrar no arquivo correto:
+```bash
+cd projeto_sd/
+```
+
 ### Subir o sistema:
 ```bash
 docker compose up --build
